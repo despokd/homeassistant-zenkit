@@ -9,7 +9,7 @@ from aiohttp import ClientError
 import voluptuous as vol
 
 from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_API_KEY
+from homeassistant.const import CONF_TOKEN
 
 from .api import Zenkit
 from .const import DOMAIN
@@ -19,7 +19,7 @@ _LOGGER = logging.getLogger(__name__)
 
 STEP_USER_DATA_SCHEMA = vol.Schema(
     {
-        vol.Required(CONF_API_KEY): str,
+        vol.Required(CONF_TOKEN): str,
     }
 )
 
@@ -27,7 +27,7 @@ STEP_USER_DATA_SCHEMA = vol.Schema(
 class ZenkitConfigFlow(ConfigFlow, domain=DOMAIN):
     """Handle a config flow for Zenkit."""
 
-    VERSION = 1
+    VERSION = 2
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
@@ -35,7 +35,7 @@ class ZenkitConfigFlow(ConfigFlow, domain=DOMAIN):
         """Handle the initial step."""
         errors: dict[str, str] = {}
         if user_input is not None:
-            zk = Zenkit(user_input[CONF_API_KEY])
+            zk = Zenkit(user_input[CONF_TOKEN])
             try:
                 user = await zk.login()
             except (TimeoutError, ClientError):

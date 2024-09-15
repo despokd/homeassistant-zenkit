@@ -6,7 +6,7 @@ import logging
 from aiohttp import ClientError
 
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_API_KEY, Platform
+from homeassistant.const import CONF_TOKEN, Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryNotReady
 
@@ -22,7 +22,7 @@ PLATFORMS: list[Platform] = [Platform.TODO]
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Zenkit from a config entry."""
 
-    api_key = entry.data[CONF_API_KEY]
+    api_key = entry.data[CONF_TOKEN]
     zk = Zenkit(api_key)
 
     try:
@@ -54,3 +54,34 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         hass.data[DOMAIN].pop(entry.entry_id)
 
     return unload_ok
+
+
+async def async_migrate_entry(hass, config_entry: ConfigEntry):
+    """Migrate old entry."""
+    _LOGGER.debug(
+        "Migrating configuration from version %s.%s",
+        config_entry.version,
+        config_entry.minor_version,
+    )
+
+    if config_entry.version > 1:
+        # This means the user has downgraded from a future version
+        return False
+
+    if config_entry.version == 1:
+
+        new_data = {**config_entry.data}
+        if config_entry.minor_version < 2:
+            new_data["token"] = new_data.pop("api_key")
+
+        hass.config_entries.async_update_entry(
+            config_entry, data=new_data, minor_version=3, version=1
+        )
+
+    _LOGGER.debug(
+        "Migration to configuration version %s.%s successful",
+        config_entry.version,
+        config_entry.minor_version,
+    )
+
+    return True

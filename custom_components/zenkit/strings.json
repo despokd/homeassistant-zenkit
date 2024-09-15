@@ -3,8 +3,9 @@
     "step": {
       "user": {
         "data": {
-          "api_key": "[%key:common::config_flow::data::api_key%]"
-        }
+          "token": "[%key:common::config_flow::data::api_token%]"
+        },
+        "description": "Please enter your API token from your Account > Integrations > API Tokens section in Zenkit"
       }
     },
     "error": {

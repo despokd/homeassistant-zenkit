@@ -1,0 +1,17 @@
+{
+    "config": {
+        "step": {
+            "user": {
+                "data": {
+                    "token": "API Token"
+                },
+                "description": "Get your API token from Account > Integrations > API Tokens section"
+            }
+        },
+        "error": {
+            "cannot_connect": "Can't connect to Zenkit API. Please try again later.",
+            "invalid_auth": "Invalid API token. Please check and try again.",
+            "unknown": "Unknown error occurred. Please try again later."
+        }
+    }
+}
