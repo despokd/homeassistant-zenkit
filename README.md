@@ -11,12 +11,12 @@ Custom component for Home Assistant that integrates todo lists of Zenkit
 - [ ] add setup instructions for custom repositories at HACS
 - [ ] may handle rate limits better (Failed to fetch entries for lists ...)
 - [ ] handle failed fetches better (timeouts, maintenance, etc.)
-- [ ] show integration with list entities in the UI (shows up in entities list, but not in Integrations)
 - [ ] test out lists which are not type TODO  (e.g. calendar, Kanban, etc.)
 - [ ] add description and due date on creation
 - [ ] implement state change
 - [ ] make due date editable
 - [ ] check why new ToDos are not instantly shown in HA
+- [ ] add zenkit logo to brands
 
 ## Releases
 
