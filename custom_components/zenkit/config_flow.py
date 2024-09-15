@@ -47,8 +47,7 @@ class ZenkitConfigFlow(ConfigFlow, domain=DOMAIN):
                 errors["base"] = "unknown"
             else:
                 return self.async_create_entry(
-                    title=user.get("username", "Zenkit"),
-                    data=user_input
+                    title=user.get("username", "Zenkit"), data=user_input
                 )
 
         return self.async_show_form(

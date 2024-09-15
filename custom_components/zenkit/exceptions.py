@@ -10,5 +10,6 @@ class ZenkitException(HomeAssistantError):
 class CannotLoginException(ZenkitException):
     """Unable to login to the Zenkit API."""
 
+
 class UpdateFailedException(ZenkitException):
     """Error during update data from Zenkit."""

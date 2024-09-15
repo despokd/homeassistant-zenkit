@@ -28,7 +28,7 @@ class ZenkitDataUpdateCoordinator(DataUpdateCoordinator[dict]):
             _LOGGER,
             name=DOMAIN,
             update_interval=timedelta(seconds=UPDATE_INTERVAL),
-            always_update=True
+            always_update=True,
         )
 
     async def _async_update_data(self) -> dict:
