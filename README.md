@@ -17,3 +17,8 @@ Custom component for Home Assistant that integrates todo lists of Zenkit
 - [ ] implement state change
 - [ ] make due date editable
 - [ ] check why new ToDos are not instantly shown in HA
+
+## Releases
+
+- auto released by workflow
+- managed by `COMPONENT_VERSION` variable at GitHub Actions
