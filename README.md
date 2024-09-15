@@ -1,8 +1,11 @@
 # Zenkit Integration for Homeassistant
 
-[![hacs_badge](https://img.shields.io/badge/HACS-Default-41BDF5.svg?style=for-the-badge)](https://github.com/hacs/integration)
+[![hacs_badge](https://img.shields.io/badge/HACS-Default-41BDF5.svg)](https://github.com/hacs/integration)
+[![GitHub Release](https://img.shields.io/github/v/release/despokd/homeassistant-zenkit)](https://github.com/despokd/homeassistant-zenkit/releases)
 
 The `zenkit` integrations adds your lists from [Zenkit](https://zenkit.com) currently as ToDo lists.
+
+[![Zenkit](./assets/Zenkit_Logo1.png)](https://zenkit.com)
 
 ## Installation
 
@@ -12,7 +15,7 @@ This integration is a not yet an official HACS Integration.
 
 1. Open HACS
 2. Open options with the three dots at the upper right
-3. Add this repo https://github.com/despokd/homeassistant-zenkit as a custom repository with type `Integration`
+3. Add this repo `https://github.com/despokd/homeassistant-zenkit` as a custom repository with type `Integration`
 4. then install the "Zenkit" integration or use the link below.
 
 [![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=despokd&repository=homeassistant-zenkit&category=integration)
