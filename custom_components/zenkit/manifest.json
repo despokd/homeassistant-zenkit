@@ -7,6 +7,7 @@
   "dependencies": [],
   "config_flow": true,
   "documentation": "https://github.com/despokd/homeassistant-zenkit",
+  "issue_tracker": "https://github.com/despokd/homeassistant-zenkit/issues",
   "integration_type": "device",
   "iot_class": "cloud_polling",
   "loggers": [

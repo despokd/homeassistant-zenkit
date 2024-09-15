@@ -1,5 +1,4 @@
 {
     "name": "Zenkit",
-    "homeassistant": "2024.4.0",
-    "issue_tracker": "https://github.com/despokd/homeassistant-zenkit/issues"
+    "homeassistant": "2024.4.0"
 }
