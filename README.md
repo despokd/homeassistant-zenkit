@@ -40,4 +40,4 @@ Go to Configuration -> Integrations and click on "add integration". Then search 
 
 ### Configuration Variables
 
-- __api_key__: Your API Key from Your Account > Integrations > API Key
+- __token__: Your API Key from Your Account > Integrations > API Key
