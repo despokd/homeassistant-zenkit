@@ -1,9 +1,11 @@
-[![hacs_badge](https://img.shields.io/badge/HACS-Default-41BDF5.svg?style=for-the-badge)](https://github.com/hacs/integration)
 # Zenkit Integration for Homeassistant
+
+[![hacs_badge](https://img.shields.io/badge/HACS-Default-41BDF5.svg?style=for-the-badge)](https://github.com/hacs/integration)
 
 The `zenkit` integrations adds your lists from [Zenkit](https://zenkit.com) currently as ToDo lists.
 
 ## Installation
+
 ### 1. Using HACS (recommended way)
 
 This integration is a not yet an official HACS Integration.
@@ -34,7 +36,8 @@ Go to Configuration -> Integrations and click on "add integration". Then search 
 [![Open your Home Assistant instance and start setting up a new integration.](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=zenkit)
 
 ### Configuration Variables
-- **api_key**: Your API Key from Your Account > Integrations > API Key
+
+- __api_key__: Your API Key from Your Account > Integrations > API Key
 
 ## Releases
 
