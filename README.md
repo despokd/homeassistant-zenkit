@@ -5,7 +5,7 @@
 
 The `zenkit` integrations adds your lists from [Zenkit](https://zenkit.com) currently as ToDo lists.
 
-[![Zenkit](./assets/Zenkit_Logo1.png)](https://zenkit.com)
+[![Zenkit](https://brands.home-assistant.io/zenkit/logo.png)](https://zenkit.com)
 
 ## Installation
 
