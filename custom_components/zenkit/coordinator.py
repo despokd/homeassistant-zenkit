@@ -20,9 +20,6 @@ class ZenkitDataUpdateCoordinator(DataUpdateCoordinator[dict]):
 
     def __init__(self, hass: HomeAssistant, zk: Zenkit) -> None:
         """Initialize global Zenkit data updater."""
-        self.zk = zk
-        self.lists: list[dict] = []
-        self._list_entries: dict[str, list[dict]] = {}
         super().__init__(
             hass,
             _LOGGER,
@@ -30,24 +27,36 @@ class ZenkitDataUpdateCoordinator(DataUpdateCoordinator[dict]):
             update_interval=timedelta(seconds=UPDATE_INTERVAL),
             always_update=True,
         )
+        self.zk = zk
+        self._lists: dict = None
 
     async def _async_update_data(self) -> dict:
-        """Fetch data from Zenkit."""
-        try:
-            lists = await self.zk.get_lists()
-        except Exception as error:
-            raise UpdateFailedException("Failed to fetch lists") from error
+        """Fetch items from Zenkit."""
 
-        self.lists = lists
-        return {"lists": lists}
+        if self._lists is None:
+            try:
+                await self.async_get_lists()
+            except Exception as error:
+                raise UpdateFailedException("Failed to fetch lists") from error
+            _LOGGER.debug("Lists were empty, fetched lists: %s", self._lists)
 
-    async def async_get_list_entities(self, list_shortId) -> list[dict]:
-        """Get list entities."""
-        listEntities = []
-        try:
-            listEntities = await self.zk.get_list_entries(list_shortId)
-        except Exception as error:
-            raise UpdateFailedException(
-                "Failed to fetch list entities for list: %s" % list_shortId
-            ) from error
-        return listEntities
+        lists_entries = dict()
+        if self._lists is not None:
+            for list in self._lists:
+                list_shortId = list["shortId"]
+                try:
+                    list_entries = await self.zk.get_list_entries(list_shortId)
+                except Exception as error:
+                    raise UpdateFailedException(
+                        "Failed to fetch list entities for list %s (%s)",
+                        list["name"],
+                        list_shortId,
+                    ) from error
+                lists_entries[list_shortId] = list_entries
+        return lists_entries
+
+    async def async_get_lists(self) -> dict:
+        """Return lists from Zenkit fetched at most once."""
+        if self._lists is None:
+            self._lists = await self.zk.get_lists()
+        return self._lists
