@@ -1,6 +1,6 @@
 """The Zenkit api."""
 
-import requests
+import requests  # type: ignore
 import asyncio
 import logging
 from datetime import date
@@ -131,7 +131,7 @@ class Zenkit:
                     break
         elif "description" in kwargs:
             # TODO implement
-            _LOGGER.warning("Description field not full implemented")
+            raise NotImplementedError("Update description field not implemented")
             text_field_count = 0
             for f, field in entry.items():
                 if f.endswith("_text"):
@@ -141,11 +141,11 @@ class Zenkit:
                     text_field_count += 1
         elif "completed" in kwargs:
             # TODO implement
-            _LOGGER.warning("Completed field not implemented")
+            raise NotImplementedError("Update completed field not implemented")
             pass
         elif "due_date" in kwargs:
             # TODO implement
-            _LOGGER.warning("Due date field not full implemented")
+            raise NotImplementedError("Update due date field not implemented")
             for f, field in entry.items():
                 if f.endswith("_date") in f:
                     due_date = kwargs["due_date"]

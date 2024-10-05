@@ -29,7 +29,7 @@ async def async_setup_entry(
     """Set up the Zenkit todo platform config entry."""
     coordinator = hass.data[DOMAIN][entry.entry_id]
 
-    lists = coordinator.data.get("lists", None)
+    lists = await coordinator.zk.get_lists()
     if lists is None:
         _LOGGER.warning("No lists found")
         return False
@@ -38,15 +38,6 @@ async def async_setup_entry(
     for list in lists:
         listId = list["id"]
         listShortId = list["shortId"]
-        try:
-            listItems = await coordinator.async_get_list_entities(listShortId)
-        except Exception as error:
-            _LOGGER.error(
-                "Failed to fetch list entities for list: %s",
-                listShortId,
-                exc_info=error,
-            )
-            listItems = []
 
         listEntities.append(
             ZenkitTodoListEntity(
@@ -55,7 +46,6 @@ async def async_setup_entry(
                 listShortId,
                 list["uuid"],
                 list["name"],
-                listItems,
                 _list_icon(list),
             )
         )
@@ -169,7 +159,6 @@ class ZenkitTodoListEntity(
         list_short_id: str,
         list_uuid: str,
         list_name: str,
-        entries: list[dict[str, Any]] = None,
         icon: str | None = None,
     ) -> None:
         """Initialize TodoistTodoListEntity."""
@@ -177,18 +166,21 @@ class ZenkitTodoListEntity(
         self.list_id = list_id
         self.list_short_id = list_short_id
         self.list_uuid = list_uuid
-        self.entries = entries
 
         self._attr_unique_id = list_uuid
         self._attr_name = list_name
         self._attr_todo_items = None
         self._attr_icon = icon
 
+        _LOGGER.debug("Created list %s (%s)", list_short_id, list_name)
+
     @callback
     def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator."""
+
         items = []
-        for entry in self.entries:
+        list_entries = self.coordinator.data.get(self.list_short_id, [])
+        for entry in list_entries:
             status = _completion_status(entry)
             # skip completed items
             if status == TodoItemStatus.COMPLETED:
@@ -203,9 +195,15 @@ class ZenkitTodoListEntity(
                     due=_due_date(entry),
                 )
             )
+        self._attr_todo_items = list(items)
 
-            self._attr_todo_items = list(items)
         super()._handle_coordinator_update()
+        _LOGGER.debug(
+            "Updated list %s (%s) with %s items",
+            self.list_short_id,
+            self.name,
+            len(self._attr_todo_items),
+        )
 
     async def async_create_todo_item(self, item: TodoItem) -> None:
         """Create a To-do item."""
