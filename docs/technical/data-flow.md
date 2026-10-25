@@ -11,5 +11,6 @@ HA config entry (API key)
 - **Polling**: the coordinator fetches lists once (`/users/me/workspacesWithLists`, flattened across workspaces and cached), then every interval fetches each list's entries via `/lists/{shortId}/entries/filter/list`, paginating recursively in pages of `ENTRIES_LIMIT`.
 - **Writes**: entity create/update/delete call the api client, then `coordinator.async_refresh()`.
   - Create: `POST /lists/{shortId}/entries` with a new uuid, then `update_entry` to set the name.
-  - Update: fetches the entry, finds the matching field, `PUT`s it. Only `name` is implemented; `description`, `completed`, `due_date` raise `NotImplementedError`.
+  - Update: the entity compares the HA item with the coordinator data and passes only changed fields. `update_entry` fetches the entry and `PUT`s all changes in one request. `name` and `completed` are implemented; other fields raise `NotImplementedError`.
+    - `completed` fetches `/lists/{shortId}/elements`, picks the `stage` element and its `done`/`todo` option, and writes `<stageUuid>_categories`. See [Zenkit Todo](../zenkit/zenkit-todo.md#status).
   - Delete: resolves uuids to numeric ids, then deprecates them (`/entries/delete/filter`); Zenkit soft-deletes.

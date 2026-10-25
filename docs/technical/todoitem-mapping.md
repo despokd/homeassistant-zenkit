@@ -12,3 +12,5 @@ Zenkit lists have user-defined fields, keyed `<elementUuid>_<type>`. The integra
 | entity icon   | list `iconClassNames` (Font Awesome) converted to `mdi:*`                   |
 
 Completed items are filtered out and not shown in HA.
+
+Writing `status` uses element roles instead of the color, see [Data flow](data-flow.md).
