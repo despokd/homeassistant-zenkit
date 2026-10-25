@@ -4,9 +4,6 @@
   "codeowners": [
     "@despokd"
   ],
-  "categories": [
-    "productivity_information.calendars_todos"
-  ],
   "config_flow": true,
   "dependencies": [],
   "documentation": "https://github.com/despokd/homeassistant-zenkit/tree/main/docs",
