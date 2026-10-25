@@ -17,7 +17,7 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import DOMAIN, DUE_DATE_FORMAT
+from .const import DOMAIN, DUE_DATE_FORMAT, COMPLETED_COLOR
 from .coordinator import ZenkitDataUpdateCoordinator
 
 _LOGGER = logging.getLogger(__name__)
@@ -111,7 +111,7 @@ def _completion_status(item: dict[str, Any]) -> TodoItemStatus:
     for f, field in item.items():
         if f.endswith("_categories_sort"):
             for category in field:
-                if category["colorHex"] == "#3ba744":
+                if category["colorHex"] == COMPLETED_COLOR:
                     return TodoItemStatus.COMPLETED
     return TodoItemStatus.NEEDS_ACTION
 
@@ -210,25 +210,36 @@ class ZenkitTodoListEntity(
         uid = str(uuid.uuid4())
         if item.status != TodoItemStatus.NEEDS_ACTION:
             raise ValueError("Only active tasks may be created.")
+        # TODO set description and due date on creation (#9)
         await self.coordinator.zk.create_entry(
             self.list_short_id,
             uid,
             name=item.summary,
-            description=item.description,
-            completed=item.due,
         )
         await self.coordinator.async_refresh()
 
     async def async_update_todo_item(self, item: TodoItem) -> None:
         """Update a To-do item."""
+        # HA passes the whole item, so only send fields which changed
+        entry = next(
+            (
+                entry
+                for entry in self.coordinator.data.get(self.list_short_id, [])
+                if entry["uuid"] == item.uid
+            ),
+            None,
+        )
+        changes = {}
+        if entry is None or item.summary != entry["displayString"]:
+            changes["name"] = item.summary
+        if entry is None or item.status != _completion_status(entry):
+            changes["completed"] = item.status == TodoItemStatus.COMPLETED
+        if not changes:
+            return
+
         try:
             await self.coordinator.zk.update_entry(
-                self.list_short_id,
-                item.uid,
-                name=item.summary,
-                description=item.description,
-                completed=item.status == TodoItemStatus.COMPLETED,
-                due_date=item.due,
+                self.list_short_id, item.uid, **changes
             )
         except Exception as error:
             _LOGGER.error("Error updating todo item: %s", item.uid, exc_info=error)
