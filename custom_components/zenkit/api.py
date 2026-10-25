@@ -5,7 +5,15 @@ import asyncio
 import datetime
 import logging
 
-from .const import API_URL, ENTRIES_LIMIT, DUE_DATE_FORMAT, DUE_DATETIME_FORMAT
+from requests.exceptions import RequestException  # type: ignore
+
+from .const import (
+    API_URL,
+    ENTRIES_LIMIT,
+    DUE_DATE_FORMAT,
+    DUE_DATETIME_FORMAT,
+    RETRY_DELAYS,
+)
 from .elements import (
     due_element,
     notes_element,
@@ -18,6 +26,22 @@ from .exceptions import CannotLoginException, UpdateFailedException
 _LOGGER = logging.getLogger(__name__)
 
 SUPPORTED_FIELDS = {"name", "completed", "description", "due"}
+
+
+def _log_error(response, message: str, *args) -> None:
+    """Log a failed response, its body may not be JSON (e.g. a proxy error page)."""
+    _LOGGER.error(
+        message + ": HTTP %s %s: %s",
+        *args,
+        response.status_code,
+        response.reason,
+        response.text[:500],
+    )
+
+
+def _is_retryable(response) -> bool:
+    """Whether a failed request may succeed when sent again."""
+    return response.status_code == 429 or response.status_code >= 500
 
 
 def _entry_fields(elements: list[dict], list_short_id: str, **kwargs) -> dict:
@@ -107,37 +131,66 @@ class Zenkit:
                 lists.append(list)
         return lists
 
-    async def get_list_entries(self, list_short_id: str, count=0) -> dict:
-        """Get list entries."""
+    async def get_list_entries(self, list_short_id: str) -> list[dict]:
+        """Get all list entries, page by page."""
+        entries = []
+        while True:
+            page = await self._get_list_entries_page(list_short_id, len(entries))
+            if page["listEntries"] is None:
+                return entries
+            entries += page["listEntries"]
+            # Stop on an empty page too, in case the total changes while paging
+            if not page["listEntries"] or page["countData"]["filteredTotal"] <= len(
+                entries
+            ):
+                return entries
+
+    async def _get_list_entries_page(self, list_short_id: str, skip: int) -> dict:
+        """Get one page of list entries, retrying transient errors."""
         # https://base.zenkit.com/docs/api/entries/post-api-v1-lists-listshortid-entries-filter-list
         url = f"{API_URL}/lists/{list_short_id}/entries/filter/list"
         data = {
             "filter": {},
             "groupByElementId": 0,
             "limit": ENTRIES_LIMIT,
-            "skip": count,
+            "skip": skip,
             "exclude": [],
             "allowDeprecated": False,
             "taskStyle": False,
         }
-        response = await asyncio.to_thread(
-            requests.post, url, headers=self.headers, json=data
+        for delay in (*RETRY_DELAYS, None):
+            try:
+                response = await asyncio.to_thread(
+                    requests.post, url, headers=self.headers, json=data
+                )
+            except RequestException as error:
+                _LOGGER.warning(
+                    "Failed to fetch entries of list %s at %s: %s",
+                    list_short_id,
+                    skip,
+                    error,
+                )
+                retry = True
+            else:
+                if response.status_code == 200:
+                    try:
+                        return response.json()
+                    except ValueError:
+                        pass
+                _log_error(
+                    response,
+                    "Failed to fetch entries of list %s at %s",
+                    list_short_id,
+                    skip,
+                )
+                retry = response.status_code == 200 or _is_retryable(response)
+            if delay is None or not retry:
+                break
+            await asyncio.sleep(delay)
+
+        raise UpdateFailedException(
+            "Failed to fetch entries of list %s at %s" % (list_short_id, skip)
         )
-
-        if response.status_code != 200:
-            _LOGGER.error(response.json())
-            raise UpdateFailedException
-        elif (
-            response.json()["listEntries"] is None
-            or response.json()["countData"]["filteredTotal"] == 0
-        ):
-            return []
-        elif response.json()["countData"]["filteredTotal"] > count + ENTRIES_LIMIT:
-            return response.json()["listEntries"] + await self.get_list_entries(
-                list_short_id, count + ENTRIES_LIMIT
-            )
-
-        return response.json()["listEntries"]
 
     async def get_list_entry(self, list_any_id: str, entry_id: str) -> dict:
         """Get list entry."""
@@ -145,8 +198,8 @@ class Zenkit:
         url = f"{API_URL}/lists/{list_any_id}/entries/{entry_id}"
         response = await asyncio.to_thread(requests.get, url, headers=self.headers)
         if response.status_code != 200:
-            _LOGGER.error(response.json())
-            raise UpdateFailedException
+            _log_error(response, "Failed to fetch entry %s", entry_id)
+            raise UpdateFailedException("Failed to fetch entry %s" % entry_id)
 
         return response.json()
 
@@ -164,7 +217,7 @@ class Zenkit:
         )
 
         if response.status_code != 200:
-            _LOGGER.error(response.json())
+            _log_error(response, "Failed to create entry in list %s", list_short_id)
             raise Exception("Error creating list entry")
 
     async def update_entry(self, list_short_id: str, entry_id: str, **kwargs) -> None:
@@ -183,7 +236,7 @@ class Zenkit:
         )
 
         if response.status_code != 200:
-            _LOGGER.error(response.json())
+            _log_error(response, "Failed to update entry %s", entry_id)
             raise Exception("Error updating list entry")
 
         return response.raise_for_status()
@@ -194,8 +247,10 @@ class Zenkit:
         url = f"{API_URL}/lists/{list_any_id}/elements"
         response = await asyncio.to_thread(requests.get, url, headers=self.headers)
         if response.status_code != 200:
-            _LOGGER.error(response.json())
-            raise UpdateFailedException
+            _log_error(response, "Failed to fetch fields of list %s", list_any_id)
+            raise UpdateFailedException(
+                "Failed to fetch fields of list %s" % list_any_id
+            )
 
         # Cached for reading entries, refreshed on each write
         self.elements[list_any_id] = response.json()
@@ -222,7 +277,7 @@ class Zenkit:
         )
 
         if response.status_code != 200:
-            _LOGGER.error(response.json())
+            _log_error(response, "Failed to delete entries in list %s", list_id)
             raise Exception("Error deleting list entries %s" % entriesIds)
 
         return response.raise_for_status()

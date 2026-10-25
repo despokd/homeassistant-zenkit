@@ -49,3 +49,9 @@ Text and date fields, verified against a `taskList` (2026-10-25):
   - With time: `{"<uuid>_date": "2026-11-03T14:30:00.000Z", "<uuid>_hasTime": true}`, stored and returned in UTC.
   - The integration always writes `_hasTime` together with `_date`.
   - Clear with `{"<uuid>_date": null}`; `""` is rejected with `400` (`C21`, "not a valid ISO date string").
+
+## Reading entries
+
+`POST /lists/{shortId}/entries/filter/list` returns at most `limit` entries (the integration uses 100) plus `countData.filteredTotal`; page with `skip`. An empty list returns `listEntries: null`.
+
+Observed 2026-10-25 on a list with 1383 entries (14 pages): 42 pages fetched back to back all returned 200 in 0.12–0.25 s, with no rate-limit or `Retry-After` headers. A page occasionally fails with a body that isn't JSON (seen once in HA, not reproducible), so error bodies must not be parsed as JSON. The rate limits themselves are undocumented in a readable form (#6).
