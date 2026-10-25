@@ -2,48 +2,73 @@
 
 import requests  # type: ignore
 import asyncio
+import datetime
 import logging
 
-from .const import API_URL, ENTRIES_LIMIT, COMPLETED_COLOR
+from .const import API_URL, ENTRIES_LIMIT, DUE_DATE_FORMAT, DUE_DATETIME_FORMAT
+from .elements import (
+    due_element,
+    notes_element,
+    stage_element,
+    status_option,
+    title_element,
+)
 from .exceptions import CannotLoginException, UpdateFailedException
 
 _LOGGER = logging.getLogger(__name__)
 
-CATEGORIES_ELEMENT = 6
+SUPPORTED_FIELDS = {"name", "completed", "description", "due"}
 
 
-def _stage_element(elements: list[dict]) -> dict | None:
-    """Get the status element of a list, see docs/zenkit/zenkit-todo.md."""
-    for element in elements:
-        if element.get("resourceRole") == "stage":
-            return element
-    # Fallback for lists without roles: categories element with a "done" colored option
-    for element in elements:
-        if element.get("elementcategory") == CATEGORIES_ELEMENT and any(
-            option.get("colorHex") == COMPLETED_COLOR
-            for option in _status_options(element)
-        ):
-            return element
-    return None
+def _entry_fields(elements: list[dict], list_short_id: str, **kwargs) -> dict:
+    """Get the entry fields to write the given values."""
+    unsupported = set(kwargs) - SUPPORTED_FIELDS
+    if unsupported:
+        raise NotImplementedError(
+            "Update of fields not implemented: %s" % ", ".join(sorted(unsupported))
+        )
+
+    def require(element: dict | None, name: str) -> str:
+        if element is None:
+            raise UpdateFailedException(
+                "List %s has no %s field" % (list_short_id, name)
+            )
+        return element["uuid"]
+
+    fields = {}
+    if "name" in kwargs:
+        fields[f"{require(title_element(elements), 'title')}_text"] = kwargs["name"]
+    if "description" in kwargs:
+        # null clears the text, Zenkit then returns ""
+        uuid = require(notes_element(elements), "description")
+        fields[f"{uuid}_text"] = kwargs["description"] or None
+    if "due" in kwargs:
+        uuid = require(due_element(elements), "due date")
+        fields.update(_due_fields(uuid, kwargs["due"]))
+    if "completed" in kwargs:
+        stage = stage_element(elements)
+        if stage is None:
+            raise UpdateFailedException(
+                "List %s has no status field to complete items" % list_short_id
+            )
+        option = status_option(stage, kwargs["completed"])
+        if option is None and kwargs["completed"]:
+            raise UpdateFailedException(
+                "List %s has no done status option" % list_short_id
+            )
+        # Only `_categories` is writable, `_categories_sort` is ignored by Zenkit
+        fields[f"{stage['uuid']}_categories"] = [option["id"]] if option else []
+    return fields
 
 
-def _status_options(element: dict) -> list[dict]:
-    """Get the selectable options of a categories element."""
-    return (element.get("elementData") or {}).get("predefinedCategories") or []
-
-
-def _status_option(element: dict, completed: bool) -> dict | None:
-    """Get the option for the completed or open status of a status element."""
-    options = _status_options(element)
-    role = "done" if completed else "todo"
-    for option in options:
-        if option.get("resourceRole") == role:
-            return option
-    if completed:
-        for option in options:
-            if option.get("colorHex") == COMPLETED_COLOR:
-                return option
-    return None
+def _due_fields(uuid: str, due: datetime.date | None) -> dict:
+    """Get the date element fields for a due date, date-time or none."""
+    if isinstance(due, datetime.datetime):
+        value = due.astimezone(datetime.timezone.utc).strftime(DUE_DATETIME_FORMAT)
+        return {f"{uuid}_date": value, f"{uuid}_hasTime": True}
+    # An empty string is rejected, null clears the date
+    value = due.strftime(DUE_DATE_FORMAT) if due is not None else None
+    return {f"{uuid}_date": value, f"{uuid}_hasTime": False}
 
 
 class Zenkit:
@@ -57,6 +82,7 @@ class Zenkit:
             "Content-Type": "application/json",
             "Zenkit-API-Key": self.api_key,
         }
+        self.elements: dict[str, list[dict]] = {}
 
     async def login(self) -> dict:
         """Login to the Zenkit API."""
@@ -125,11 +151,13 @@ class Zenkit:
         return response.json()
 
     async def create_entry(self, list_short_id: str, entry_id: str, **kwargs) -> None:
-        """Add an entry to a list."""
+        """Add an entry with its fields to a list."""
+        elements = await self.get_list_elements(list_short_id)
         # https://base.zenkit.com/docs/api/entries/post-api-v1-lists-listid-entries
         url = f"{API_URL}/lists/{list_short_id}/entries"
         data = {
             "uuid": entry_id,
+            **_entry_fields(elements, list_short_id, **kwargs),
         }
         response = await asyncio.to_thread(
             requests.post, url, headers=self.headers, json=data
@@ -139,43 +167,14 @@ class Zenkit:
             _LOGGER.error(response.json())
             raise Exception("Error creating list entry")
 
-        # Add data like name to the entry
-        try:
-            response = await self.update_entry(list_short_id, entry_id, **kwargs)
-        except Exception as error:
-            raise UpdateFailedException(
-                "Failed to add data to list entry: %s" % entry_id
-            ) from error
-
     async def update_entry(self, list_short_id: str, entry_id: str, **kwargs) -> None:
         """Update an entry in a list."""
-        try:
-            entry = await self.get_list_entry(list_short_id, entry_id)
-        except Exception as error:
-            raise UpdateFailedException(
-                "Failed to fetch list entry: %s" % entry_id
-            ) from error
-
-        unsupported = set(kwargs) - {"name", "completed"}
-        if unsupported:
-            # TODO implement description and due date (#9, #11)
-            raise NotImplementedError(
-                "Update of fields not implemented: %s" % ", ".join(sorted(unsupported))
-            )
-
-        update = {}
-        if "name" in kwargs:
-            for f, field in entry.items():
-                if f.endswith("text") and (
-                    field == entry["displayString"] or entry["displayString"] == None
-                ):
-                    update[f] = kwargs["name"]
-                    break
-        if "completed" in kwargs:
-            update.update(await self._status_update(list_short_id, kwargs["completed"]))
-
-        if not update:
+        if not kwargs:
             return None
+
+        # Fetched on each write, so renamed or added fields and options are picked up
+        elements = await self.get_list_elements(list_short_id)
+        update = _entry_fields(elements, list_short_id, **kwargs)
 
         # https://base.zenkit.com/docs/api/entries/put-api-v1-lists-listid-entries-listentryid
         url = f"{API_URL}/lists/{list_short_id}/entries/{entry_id}"
@@ -198,26 +197,9 @@ class Zenkit:
             _LOGGER.error(response.json())
             raise UpdateFailedException
 
-        return response.json()
-
-    async def _status_update(self, list_short_id: str, completed: bool) -> dict:
-        """Get the entry fields to set the completed or open status."""
-        # Fetched on each status change, so renamed or added options are picked up
-        elements = await self.get_list_elements(list_short_id)
-        stage = _stage_element(elements)
-        if stage is None:
-            raise UpdateFailedException(
-                "List %s has no status field to complete items" % list_short_id
-            )
-
-        option = _status_option(stage, completed)
-        if option is None and completed:
-            raise UpdateFailedException(
-                "List %s has no done status option" % list_short_id
-            )
-
-        # Only `_categories` is writable, `_categories_sort` is ignored by Zenkit
-        return {f"{stage['uuid']}_categories": [option["id"]] if option else []}
+        # Cached for reading entries, refreshed on each write
+        self.elements[list_any_id] = response.json()
+        return self.elements[list_any_id]
 
     async def deprecate_entries(self, list_id: str, entriesIds: list[str]) -> None:
         # https://base.zenkit.com/docs/api/entries/post-api-v1-lists-listid-entries-delete-filter

@@ -44,6 +44,16 @@ class ZenkitDataUpdateCoordinator(DataUpdateCoordinator[dict]):
         if self._lists is not None:
             for list in self._lists:
                 list_shortId = list["shortId"]
+                if list_shortId not in self.zk.elements:
+                    # Entities fall back to heuristics until the fields are known
+                    try:
+                        await self.zk.get_list_elements(list_shortId)
+                    except Exception:
+                        _LOGGER.warning(
+                            "Failed to fetch fields for list %s (%s)",
+                            list["name"],
+                            list_shortId,
+                        )
                 try:
                     list_entries = await self.zk.get_list_entries(list_shortId)
                 except Exception as error:
