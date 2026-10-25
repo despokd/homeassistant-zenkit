@@ -15,6 +15,7 @@
 | `tags` | 6 (categories) | Tags | |
 
 - Lists of type `database` (e.g. created empty) only have `title`; elements without a role return `resourceRole: null`.
+- `isPrimary: true` marks the title element on every list, including `database` lists.
 - `GET /api/v1/lists/{listAllId}` has `resourceType` (`taskList`, `project`, `database`) and `appType` (`todos`, `base`).
 
 ## Status
@@ -36,5 +37,15 @@ Verified against a `taskList` (2026-10-25):
 - Writing `_categories_sort` returns `200` but is **silently ignored**.
 - `{"<uuid>_categories": []}` clears the status.
 - One PUT can set several fields, e.g. `{"<titleUuid>_text": "...", "<stageUuid>_categories": [optionId]}`.
-- `POST /lists/{listAllId}/entries` accepts field values next to `uuid`, so an entry can be created with title and status in one request.
+- `POST /lists/{listAllId}/entries` accepts field values next to `uuid`, so an entry can be created with title, notes, due date and status in one request.
 - `POST /lists/{listId}/entries/delete/filter` with `{"listEntryIds": [id]}` deprecates entries: a GET by uuid still returns them with `deprecated_at` set, but the filter endpoint with `allowDeprecated: false` no longer lists them.
+
+Text and date fields, verified against a `taskList` (2026-10-25):
+
+- Text (`notes`): `{"<uuid>_text": "..."}`. Stored as plain text (`<uuid>_textType: "plain"`), line breaks and Markdown characters are kept as is. Zenkit also returns `<uuid>_searchText`.
+- Clear a text with `null`; it is then returned as `""`.
+- Date (`dueDate`): an entry has `<uuid>_date`, `<uuid>_hasTime`, `<uuid>_endDate` and `<uuid>_duration`.
+  - Date only: `{"<uuid>_date": "2026-11-03", "<uuid>_hasTime": false}`.
+  - With time: `{"<uuid>_date": "2026-11-03T14:30:00.000Z", "<uuid>_hasTime": true}`, stored and returned in UTC.
+  - The integration always writes `_hasTime` together with `_date`.
+  - Clear with `{"<uuid>_date": null}`; `""` is rejected with `400` (`C21`, "not a valid ISO date string").

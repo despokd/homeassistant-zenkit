@@ -13,8 +13,5 @@
   "loggers": [
     "zenkit"
   ],
-  "requirements": [
-    "requests"
-  ],
   "version": "0.0.4"
 }

@@ -16,9 +16,11 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from homeassistant.util import dt as dt_util
 
 from .const import DOMAIN, DUE_DATE_FORMAT, COMPLETED_COLOR
 from .coordinator import ZenkitDataUpdateCoordinator
+from .elements import due_element, notes_element, stage_element, status_option
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -95,8 +97,18 @@ def _list_icon(list: dict[str, Any]) -> str | None:
     return f"mdi:{class_name}"
 
 
-def _completion_status(item: dict[str, Any]) -> TodoItemStatus:
-    """Get the state of by sort field item."""
+def _completion_status(
+    item: dict[str, Any], elements: list[dict] | None = None
+) -> TodoItemStatus:
+    """Get the state of an entry by its status field."""
+    stage = stage_element(elements) if elements else None
+    done = status_option(stage, True) if stage else None
+    if done is not None and f"{stage['uuid']}_categories" in item:
+        if done["id"] in (item[f"{stage['uuid']}_categories"] or []):
+            return TodoItemStatus.COMPLETED
+        return TodoItemStatus.NEEDS_ACTION
+
+    # Fallback without known fields: "done" colored option in any status field
     """
     Example completion status field, name is translated
     "fd3bb8c3-07a5-424f-9bb0-82ab022f2e24_categories_sort": [
@@ -116,25 +128,52 @@ def _completion_status(item: dict[str, Any]) -> TodoItemStatus:
     return TodoItemStatus.NEEDS_ACTION
 
 
-def _description(item: dict[str, Any]) -> str | None:
-    """Get the description of by text field."""
-    # Zenkit does not have a description field, so we use the first text field ending with _text as key
+def _description(
+    item: dict[str, Any], elements: list[dict] | None = None
+) -> str | None:
+    """Get the description of an entry by its notes field."""
+    notes = notes_element(elements) if elements else None
+    if notes is not None:
+        # Zenkit returns "" for a cleared text
+        return item.get(f"{notes['uuid']}_text") or None
+
+    # Fallback without known fields: first text field which is not the summary
     for f, field in item.items():
         if f.endswith("_text") and field != item["displayString"]:
             return field
     return None
 
 
-def _due_date(item: dict[str, Any]) -> str | None:
-    """Get the due date of by date field."""
-    # Zenkit does not have a due date field, so we use the first date field ending with _date as key
+def _due_date(
+    item: dict[str, Any], elements: list[dict] | None = None
+) -> datetime.date | datetime.datetime | None:
+    """Get the due date of an entry by its due date field."""
+    due = due_element(elements) if elements else None
+    if due is not None:
+        return _parse_due(item, due["uuid"])
+
+    # Fallback without known fields: first date field which is set
     for f, field in item.items():
         if f.endswith("_date") and field is not None:
-            try:
-                due_datetime = datetime.datetime.strptime(field, DUE_DATE_FORMAT)
-                return due_datetime.date()
-            except ValueError:
-                _LOGGER.warning("Unable to parse due date %s", field)
+            parsed = _parse_due(item, f.removesuffix("_date"))
+            if parsed is not None:
+                return parsed
+    return None
+
+
+def _parse_due(
+    item: dict[str, Any], uuid: str
+) -> datetime.date | datetime.datetime | None:
+    """Parse a date field, which has a time in UTC if `_hasTime` is set."""
+    value = item.get(f"{uuid}_date")
+    if value is None:
+        return None
+    try:
+        if item.get(f"{uuid}_hasTime"):
+            return dt_util.as_local(datetime.datetime.fromisoformat(value))
+        return datetime.datetime.strptime(value[:10], DUE_DATE_FORMAT).date()
+    except ValueError:
+        _LOGGER.warning("Unable to parse due date %s", value)
     return None
 
 
@@ -149,6 +188,7 @@ class ZenkitTodoListEntity(
         | TodoListEntityFeature.UPDATE_TODO_ITEM
         | TodoListEntityFeature.DELETE_TODO_ITEM
         | TodoListEntityFeature.SET_DUE_DATE_ON_ITEM
+        | TodoListEntityFeature.SET_DUE_DATETIME_ON_ITEM
         | TodoListEntityFeature.SET_DESCRIPTION_ON_ITEM
     )
 
@@ -179,9 +219,10 @@ class ZenkitTodoListEntity(
         """Handle updated data from the coordinator."""
 
         items = []
+        elements = self._elements
         list_entries = self.coordinator.data.get(self.list_short_id, [])
         for entry in list_entries:
-            status = _completion_status(entry)
+            status = _completion_status(entry, elements)
             # skip completed items
             if status == TodoItemStatus.COMPLETED:
                 continue
@@ -191,8 +232,8 @@ class ZenkitTodoListEntity(
                     uid=entry["uuid"],
                     summary=entry["displayString"],
                     status=status,
-                    description=_description(entry),
-                    due=_due_date(entry),
+                    description=_description(entry, elements),
+                    due=_due_date(entry, elements),
                 )
             )
         self._attr_todo_items = list(items)
@@ -205,17 +246,23 @@ class ZenkitTodoListEntity(
             len(self._attr_todo_items),
         )
 
+    @property
+    def _elements(self) -> list[dict] | None:
+        """Fields of the list, None until fetched."""
+        return self.coordinator.zk.elements.get(self.list_short_id)
+
     async def async_create_todo_item(self, item: TodoItem) -> None:
         """Create a To-do item."""
         uid = str(uuid.uuid4())
         if item.status != TodoItemStatus.NEEDS_ACTION:
             raise ValueError("Only active tasks may be created.")
-        # TODO set description and due date on creation (#9)
-        await self.coordinator.zk.create_entry(
-            self.list_short_id,
-            uid,
-            name=item.summary,
-        )
+        fields = {"name": item.summary}
+        # Only send what is set, lists may lack a description or due date field
+        if item.description:
+            fields["description"] = item.description
+        if item.due is not None:
+            fields["due"] = item.due
+        await self.coordinator.zk.create_entry(self.list_short_id, uid, **fields)
         await self.coordinator.async_refresh()
 
     async def async_update_todo_item(self, item: TodoItem) -> None:
@@ -229,11 +276,18 @@ class ZenkitTodoListEntity(
             ),
             None,
         )
+        elements = self._elements
         changes = {}
         if entry is None or item.summary != entry["displayString"]:
             changes["name"] = item.summary
-        if entry is None or item.status != _completion_status(entry):
+        if entry is None or item.status != _completion_status(entry, elements):
             changes["completed"] = item.status == TodoItemStatus.COMPLETED
+        description = _description(entry, elements) if entry else None
+        if (item.description or None) != description:
+            changes["description"] = item.description
+        due = _due_date(entry, elements) if entry else None
+        if item.due != due:
+            changes["due"] = item.due
         if not changes:
             return
 
