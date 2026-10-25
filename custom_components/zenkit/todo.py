@@ -247,6 +247,14 @@ class ZenkitTodoListEntity(
         )
 
     @property
+    def available(self) -> bool:
+        """Unavailable while only this list fails to load."""
+        return (
+            super().available
+            and self.list_short_id not in self.coordinator.failed_lists
+        )
+
+    @property
     def _elements(self) -> list[dict] | None:
         """Fields of the list, None until fetched."""
         return self.coordinator.zk.elements.get(self.list_short_id)
@@ -263,7 +271,7 @@ class ZenkitTodoListEntity(
         if item.due is not None:
             fields["due"] = item.due
         await self.coordinator.zk.create_entry(self.list_short_id, uid, **fields)
-        await self.coordinator.async_refresh()
+        await self.coordinator.async_refresh_list(self.list_short_id)
 
     async def async_update_todo_item(self, item: TodoItem) -> None:
         """Update a To-do item."""
@@ -299,7 +307,7 @@ class ZenkitTodoListEntity(
             _LOGGER.error("Error updating todo item: %s", item.uid, exc_info=error)
             raise error
 
-        await self.coordinator.async_refresh()
+        await self.coordinator.async_refresh_list(self.list_short_id)
 
     async def async_delete_todo_items(self, uids: list[str]) -> None:
         """Delete a To-do item. Which is a deprecation at zenkit before complete deletion."""
@@ -308,7 +316,7 @@ class ZenkitTodoListEntity(
         except Exception as error:
             _LOGGER.error("Error deleting todo items: %s", uids, exc_info=error)
             raise error
-        await self.coordinator.async_refresh()
+        await self.coordinator.async_refresh_list(self.list_short_id)
 
     async def async_added_to_hass(self) -> None:
         """When entity is added to hass update state from existing coordinator data."""

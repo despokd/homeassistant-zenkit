@@ -223,3 +223,82 @@ async def test_create_entry_with_fields_in_one_request(requests_mock):
         f"{DUE}_hasTime": False,
     }
     requests_mock.put.assert_not_called()
+
+
+def _page(entries, total):
+    return _response({"listEntries": entries, "countData": {"filteredTotal": total}})
+
+
+def _error_response(status_code, text):
+    response = _response(None, status_code)
+    response.json.side_effect = ValueError("Expecting value")
+    response.reason = "Error"
+    response.text = text
+    return response
+
+
+@pytest.fixture
+def no_sleep():
+    with patch("custom_components.zenkit.api.asyncio.sleep") as sleep:
+        yield sleep
+
+
+async def test_get_list_entries_merges_pages(requests_mock):
+    requests_mock.post.side_effect = [
+        _page([{"id": i} for i in range(100)], 150),
+        _page([{"id": i} for i in range(100, 150)], 150),
+    ]
+
+    entries = await Zenkit("key").get_list_entries("list")
+
+    assert entries == [{"id": i} for i in range(150)]
+    skips = [c.kwargs["json"]["skip"] for c in requests_mock.post.call_args_list]
+    assert skips == [0, 100]
+
+
+async def test_get_list_entries_empty_list(requests_mock):
+    requests_mock.post.return_value = _page(None, 0)
+
+    assert await Zenkit("key").get_list_entries("list") == []
+
+
+async def test_get_list_entries_retries_failed_page(requests_mock, no_sleep):
+    requests_mock.post.side_effect = [
+        _page([{"id": i} for i in range(100)], 101),
+        _error_response(502, "<html>Bad Gateway</html>"),
+        _error_response(200, ""),
+        _page([{"id": 100}], 101),
+    ]
+
+    entries = await Zenkit("key").get_list_entries("list")
+
+    assert len(entries) == 101
+    assert [c.args[0] for c in no_sleep.call_args_list] == [1, 3]
+
+
+async def test_get_list_entries_fails_after_retries(requests_mock, no_sleep, caplog):
+    requests_mock.post.return_value = _error_response(503, "<html>down</html>")
+
+    with pytest.raises(UpdateFailedException):
+        await Zenkit("key").get_list_entries("list")
+
+    assert requests_mock.post.call_count == 3
+    assert "HTTP 503 Error: <html>down</html>" in caplog.text
+
+
+async def test_get_list_entries_client_error_is_not_retried(requests_mock, no_sleep):
+    requests_mock.post.return_value = _error_response(404, "not found")
+
+    with pytest.raises(UpdateFailedException):
+        await Zenkit("key").get_list_entries("list")
+
+    assert requests_mock.post.call_count == 1
+    no_sleep.assert_not_called()
+
+
+async def test_get_list_entries_retries_connection_error(requests_mock, no_sleep):
+    from requests.exceptions import ConnectionError
+
+    requests_mock.post.side_effect = [ConnectionError("reset"), _page([{"id": 1}], 1)]
+
+    assert await Zenkit("key").get_list_entries("list") == [{"id": 1}]

@@ -48,7 +48,8 @@ def entity():
     coordinator.zk.elements = {}
     coordinator.zk.update_entry = AsyncMock()
     coordinator.zk.create_entry = AsyncMock()
-    coordinator.async_refresh = AsyncMock()
+    coordinator.async_refresh_list = AsyncMock()
+    coordinator.failed_lists = set()
     return ZenkitTodoListEntity(coordinator, "1", "list", "list-uuid", "List")
 
 
@@ -81,7 +82,7 @@ async def test_complete_item(entity):
     entity.coordinator.zk.update_entry.assert_awaited_once_with(
         "list", "entry-uuid", completed=True
     )
-    entity.coordinator.async_refresh.assert_awaited_once()
+    entity.coordinator.async_refresh_list.assert_awaited_once_with("list")
 
 
 async def test_rename_item(entity):
@@ -96,7 +97,7 @@ async def test_unchanged_item_is_not_written(entity):
     await entity.async_update_todo_item(_item())
 
     entity.coordinator.zk.update_entry.assert_not_awaited()
-    entity.coordinator.async_refresh.assert_not_awaited()
+    entity.coordinator.async_refresh_list.assert_not_awaited()
 
 
 async def test_reopen_item(entity):
@@ -177,7 +178,7 @@ async def test_create_item_with_fields(entity):
 
     _, _, kwargs = entity.coordinator.zk.create_entry.mock_calls[0]
     assert kwargs == {"name": "Buy milk", **_kwargs()}
-    entity.coordinator.async_refresh.assert_awaited_once()
+    entity.coordinator.async_refresh_list.assert_awaited_once_with("list")
 
 
 async def test_create_item_without_fields_sends_only_name(entity):
@@ -187,3 +188,13 @@ async def test_create_item_without_fields_sends_only_name(entity):
 
     _, _, kwargs = entity.coordinator.zk.create_entry.mock_calls[0]
     assert kwargs == {"name": "Buy milk"}
+
+
+def test_available_while_list_loads(entity):
+    assert entity.available
+
+
+def test_unavailable_when_only_this_list_failed(entity):
+    entity.coordinator.failed_lists = {"list"}
+
+    assert not entity.available
