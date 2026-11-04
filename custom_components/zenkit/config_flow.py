@@ -5,7 +5,6 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from aiohttp import ClientError
 import voluptuous as vol
 
 from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
@@ -13,7 +12,7 @@ from homeassistant.const import CONF_TOKEN
 
 from .api import Zenkit
 from .const import DOMAIN
-from .exceptions import CannotLoginException
+from .exceptions import CannotConnectException, CannotLoginException
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -38,7 +37,7 @@ class ZenkitConfigFlow(ConfigFlow, domain=DOMAIN):
             zk = Zenkit(user_input[CONF_TOKEN])
             try:
                 user = await zk.login()
-            except (TimeoutError, ClientError):
+            except (TimeoutError, CannotConnectException):
                 errors["base"] = "cannot_connect"
             except CannotLoginException:
                 errors["base"] = "invalid_auth"

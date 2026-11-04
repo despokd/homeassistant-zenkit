@@ -4,9 +4,14 @@ import datetime
 from unittest.mock import MagicMock, patch
 
 import pytest
+from requests.exceptions import RequestException
 
 from custom_components.zenkit.api import Zenkit
-from custom_components.zenkit.exceptions import UpdateFailedException
+from custom_components.zenkit.exceptions import (
+    CannotConnectException,
+    CannotLoginException,
+    UpdateFailedException,
+)
 
 TITLE = "title-uuid"
 NOTES = "notes-uuid"
@@ -302,3 +307,38 @@ async def test_get_list_entries_retries_connection_error(requests_mock, no_sleep
     requests_mock.post.side_effect = [ConnectionError("reset"), _page([{"id": 1}], 1)]
 
     assert await Zenkit("key").get_list_entries("list") == [{"id": 1}]
+
+
+@pytest.fixture
+def user():
+    return {"id": 1, "username": "user", "api_key": "key"}
+
+
+async def test_login_returns_user(requests_mock, user):
+    requests_mock.get.side_effect = None
+    requests_mock.get.return_value = _response(user)
+
+    assert await Zenkit("key").login() == user
+
+
+async def test_login_invalid_key(requests_mock):
+    requests_mock.get.side_effect = None
+    requests_mock.get.return_value = _response({"error": {}}, status_code=401)
+
+    with pytest.raises(CannotLoginException):
+        await Zenkit("key").login()
+
+
+async def test_login_server_error(requests_mock):
+    requests_mock.get.side_effect = None
+    requests_mock.get.return_value = _response(None, status_code=502)
+
+    with pytest.raises(CannotConnectException):
+        await Zenkit("key").login()
+
+
+async def test_login_network_error(requests_mock):
+    requests_mock.get.side_effect = RequestException("offline")
+
+    with pytest.raises(CannotConnectException):
+        await Zenkit("key").login()
