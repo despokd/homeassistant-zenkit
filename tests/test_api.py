@@ -6,7 +6,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from requests.exceptions import RequestException
 
-from custom_components.zenkit.api import Zenkit
+from custom_components.zenkit.api import Zenkit, user_image_url
 from custom_components.zenkit.exceptions import (
     CannotConnectException,
     CannotLoginException,
@@ -342,3 +342,55 @@ async def test_login_network_error(requests_mock):
 
     with pytest.raises(CannotConnectException):
         await Zenkit("key").login()
+
+
+async def test_unread_notifications_count(requests_mock):
+    requests_mock.get.side_effect = None
+    requests_mock.get.return_value = _response(
+        {"newNotificationsCount": 3, "thereAreMoreResults": True, "notifications": []}
+    )
+
+    assert await Zenkit("key").get_unread_notifications_count() == 3
+    assert requests_mock.get.call_args.kwargs["params"] == {"limit": 1}
+
+
+async def test_unread_notifications_count_fails(requests_mock):
+    requests_mock.get.side_effect = None
+    requests_mock.get.return_value = _response({}, status_code=500)
+
+    with pytest.raises(UpdateFailedException):
+        await Zenkit("key").get_unread_notifications_count()
+
+
+async def test_get_organization(requests_mock):
+    requests_mock.get.side_effect = None
+    requests_mock.get.return_value = _response(
+        {"myOrganizationId": 2, "organizations": [{"id": 1}, {"id": 2, "name": "B"}]}
+    )
+
+    assert await Zenkit("key").get_organization(2) == {"id": 2, "name": "B"}
+    assert await Zenkit("key").get_organization(3) is None
+    assert requests_mock.get.call_args.args[0].endswith("/users/me/organizations")
+
+
+async def test_get_organization_members_count(requests_mock):
+    requests_mock.get.side_effect = None
+    requests_mock.get.return_value = _response({"filteredTotal": 2, "users": []})
+
+    assert await Zenkit("key").get_organization_members_count(1) == 2
+    assert requests_mock.get.call_args.args[0].endswith("/organizations/1/users")
+
+
+@pytest.mark.parametrize(
+    ("user", "url"),
+    [
+        (
+            {"imageLink": "123", "isImagePreferred": True},
+            "https://zenkit.com/api/v1/files/123/convert?w=64&h=64",
+        ),
+        ({"imageLink": "123", "isImagePreferred": False}, None),
+        ({"imageLink": None, "isImagePreferred": True}, None),
+    ],
+)
+def test_user_image_url(user, url):
+    assert user_image_url(user, 64) == url

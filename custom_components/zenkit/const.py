@@ -1,8 +1,11 @@
 """Constants for the Zenkit integration."""
 
 DOMAIN = "zenkit"
-API_URL = "https://zenkit.com/api/v1"
+ZENKIT_URL = "https://zenkit.com"
+API_URL = f"{ZENKIT_URL}/api/v1"
 UPDATE_INTERVAL = 60
+# Seconds between fetches of the account data, it rarely changes
+USER_UPDATE_INTERVAL = 3600
 ENTRIES_LIMIT = 100
 # Seconds to wait before retrying a failed page of entries
 RETRY_DELAYS = (1, 3)

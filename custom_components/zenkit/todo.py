@@ -211,6 +211,7 @@ class ZenkitTodoListEntity(
         self._attr_name = list_name
         self._attr_todo_items = None
         self._attr_icon = icon
+        self._attr_device_info = coordinator.device_info
 
         _LOGGER.debug("Created list %s (%s)", list_short_id, list_name)
 

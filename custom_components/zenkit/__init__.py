@@ -15,7 +15,12 @@ from .exceptions import CannotConnectException, CannotLoginException
 from .coordinator import ZenkitDataUpdateCoordinator
 
 _LOGGER = logging.getLogger(__name__)
-PLATFORMS: list[Platform] = [Platform.BUTTON, Platform.TODO]
+PLATFORMS: list[Platform] = [
+    Platform.BUTTON,
+    Platform.IMAGE,
+    Platform.SENSOR,
+    Platform.TODO,
+]
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
@@ -25,7 +30,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     zk = Zenkit(api_key)
 
     try:
-        await zk.login()
+        user = await zk.login()
     except (TimeoutError, CannotConnectException) as error:
         _LOGGER.error("Error connecting to Zenkit api")
         raise ConfigEntryNotReady from error
@@ -36,7 +41,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         _LOGGER.error("Unexpected error connecting to Zenkit api")
         raise ConfigEntryNotReady from error
 
-    coordinator = ZenkitDataUpdateCoordinator(hass, zk)
+    _set_unique_id(hass, entry, str(user["id"]))
+
+    coordinator = ZenkitDataUpdateCoordinator(hass, zk, user)
     await coordinator.async_config_entry_first_refresh()
 
     hass.data.setdefault(DOMAIN, {})
@@ -45,6 +52,20 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     return True
+
+
+def _set_unique_id(hass: HomeAssistant, entry: ConfigEntry, user_id: str) -> None:
+    """Set the Zenkit user id on entries created before it was stored."""
+    if entry.unique_id is not None:
+        return
+    if any(
+        other.unique_id == user_id
+        for other in hass.config_entries.async_entries(DOMAIN)
+        if other.entry_id != entry.entry_id
+    ):
+        _LOGGER.warning("Zenkit account %s is configured more than once", user_id)
+        return
+    hass.config_entries.async_update_entry(entry, unique_id=user_id)
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:

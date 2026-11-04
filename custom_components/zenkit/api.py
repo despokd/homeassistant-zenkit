@@ -43,6 +43,13 @@ def _log_error(response, message: str, *args) -> None:
     )
 
 
+def user_image_url(user: dict, size: int) -> str | None:
+    """Get the URL of a user's profile image, it needs no API key."""
+    if not user.get("isImagePreferred") or not user.get("imageLink"):
+        return None
+    return f"{API_URL}/files/{user['imageLink']}/convert?w={size}&h={size}"
+
+
 def _is_retryable(response) -> bool:
     """Whether a failed request may succeed when sent again."""
     return response.status_code == 429 or response.status_code >= 500
@@ -134,6 +141,48 @@ class Zenkit:
             raise CannotLoginException
 
         return user
+
+    async def get_organization(self, organization_id: int) -> dict | None:
+        """Get an organization of the current user, None if it is not one of them."""
+        # Not in the docs, /organizations/{id} is no endpoint
+        url = f"{API_URL}/users/me/organizations"
+        response = await asyncio.to_thread(requests.get, url, headers=self.headers)
+        if response.status_code != 200:
+            _log_error(response, "Failed to fetch organizations")
+            raise UpdateFailedException("Failed to fetch organizations")
+
+        return next(
+            (
+                organization
+                for organization in response.json()["organizations"]
+                if organization["id"] == organization_id
+            ),
+            None,
+        )
+
+    async def get_organization_members_count(self, organization_id: int) -> int:
+        """Get the number of users of an organization."""
+        # Not in the docs, also returns the users with their emails
+        url = f"{API_URL}/organizations/{organization_id}/users"
+        response = await asyncio.to_thread(requests.get, url, headers=self.headers)
+        if response.status_code != 200:
+            _log_error(response, "Failed to fetch organization users")
+            raise UpdateFailedException("Failed to fetch organization users")
+
+        return response.json()["filteredTotal"]
+
+    async def get_unread_notifications_count(self) -> int:
+        """Get the number of new notifications."""
+        # https://base.zenkit.com/docs/api/notifications/get-api-v1-users-me-notifications
+        url = f"{API_URL}/users/me/notifications"
+        response = await asyncio.to_thread(
+            requests.get, url, headers=self.headers, params={"limit": 1}
+        )
+        if response.status_code != 200:
+            _log_error(response, "Failed to fetch notifications")
+            raise UpdateFailedException("Failed to fetch notifications")
+
+        return response.json()["newNotificationsCount"]
 
     async def get_lists(self) -> dict:
         """Get lists."""
