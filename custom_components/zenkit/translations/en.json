@@ -13,5 +13,12 @@
             "invalid_auth": "Invalid API token. Please check and try again.",
             "unknown": "Unknown error occurred. Please try again later."
         }
+    },
+    "entity": {
+        "button": {
+            "refresh": {
+                "name": "Refresh Zenkit data"
+            }
+        }
     }
 }

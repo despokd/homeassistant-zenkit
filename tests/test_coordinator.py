@@ -90,3 +90,12 @@ async def test_refresh_list_failure_marks_only_that_list(coordinator, entries):
     assert coordinator.data == {"b": [{"uuid": "b1"}]}
     assert coordinator.failed_lists == {"a"}
     assert coordinator.last_update_success
+
+
+async def test_force_refresh_refetches_fields(coordinator):
+    coordinator.zk.get_list_elements = AsyncMock()
+
+    await coordinator.async_force_refresh()
+
+    assert coordinator.zk.get_list_elements.await_count == 2
+    assert coordinator.data == {"a": [{"uuid": "a1"}], "b": [{"uuid": "b1"}]}
