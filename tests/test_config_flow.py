@@ -7,6 +7,7 @@ import pytest
 from homeassistant import config_entries
 from homeassistant.const import CONF_TOKEN
 from homeassistant.data_entry_flow import FlowResultType
+from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.zenkit.const import DOMAIN
 from custom_components.zenkit.exceptions import (
@@ -47,6 +48,16 @@ async def test_creates_entry_for_account(hass, login):
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["title"] == "user"
     assert result["data"] == {CONF_TOKEN: "key"}
+    assert result["result"].unique_id == "906842"
+
+
+async def test_same_account_aborts(hass, login):
+    MockConfigEntry(domain=DOMAIN, unique_id="906842", version=2).add_to_hass(hass)
+
+    result = await _submit(hass)
+
+    assert result["type"] is FlowResultType.ABORT
+    assert result["reason"] == "already_configured"
 
 
 @pytest.mark.parametrize(

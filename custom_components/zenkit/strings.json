@@ -12,12 +12,97 @@
       "cannot_connect": "[%key:common::config_flow::error::cannot_connect%]",
       "invalid_auth": "[%key:common::config_flow::error::invalid_auth%]",
       "unknown": "[%key:common::config_flow::error::unknown%]"
+    },
+    "abort": {
+      "already_configured": "[%key:common::config_flow::abort::already_configured_account%]"
     }
   },
   "entity": {
     "button": {
       "refresh": {
         "name": "Refresh Zenkit data"
+      }
+    },
+    "sensor": {
+      "unread_notifications": {
+        "name": "Unread notifications"
+      },
+      "lists": {
+        "name": "Lists"
+      },
+      "username": {
+        "name": "Username"
+      },
+      "timezone": {
+        "name": "Time zone"
+      },
+      "language": {
+        "name": "Language"
+      },
+      "two_factor_authentication": {
+        "name": "Two-factor authentication",
+        "state": {
+          "enabled": "[%key:common::state::enabled%]",
+          "disabled": "[%key:common::state::disabled%]"
+        }
+      },
+      "registered": {
+        "name": "Registered"
+      },
+      "last_login": {
+        "name": "Last login"
+      },
+      "display_name": {
+        "name": "Display name"
+      },
+      "full_name": {
+        "name": "Full name"
+      },
+      "initials": {
+        "name": "Initials"
+      },
+      "email": {
+        "name": "Email"
+      },
+      "apps": {
+        "name": "Apps"
+      },
+      "super_admin": {
+        "name": "Super admin",
+        "state": {
+          "yes": "[%key:common::state::yes%]",
+          "no": "[%key:common::state::no%]"
+        }
+      },
+      "date_format": {
+        "name": "Date format"
+      },
+      "time_format": {
+        "name": "Time format"
+      },
+      "start_of_week": {
+        "name": "Start of the week"
+      },
+      "organization": {
+        "name": "Organization"
+      },
+      "organization_plan": {
+        "name": "Organization plan"
+      },
+      "organization_members": {
+        "name": "Organization members"
+      },
+      "organization_quotas_exceeded": {
+        "name": "Organization quotas exceeded",
+        "state": {
+          "yes": "[%key:common::state::yes%]",
+          "no": "[%key:common::state::no%]"
+        }
+      }
+    },
+    "image": {
+      "profile_image": {
+        "name": "Profile image"
       }
     }
   }

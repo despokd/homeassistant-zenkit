@@ -4,12 +4,21 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
+from homeassistant.helpers.device_registry import DeviceEntryType
 from homeassistant.helpers.update_coordinator import UpdateFailed
 
+from custom_components.zenkit.const import DOMAIN
 from custom_components.zenkit.coordinator import ZenkitDataUpdateCoordinator
 from custom_components.zenkit.exceptions import UpdateFailedException
 
 LISTS = [{"shortId": "a", "name": "A"}, {"shortId": "b", "name": "B"}]
+USER = {
+    "id": 906842,
+    "username": "user",
+    "displayname": "User Name",
+    "organizationId": 560986,
+}
+ORGANIZATION = {"id": 560986, "name": "Org", "planId": "free"}
 
 
 @pytest.fixture
@@ -31,7 +40,11 @@ def coordinator(hass, entries):
     zk.elements = {"a": [], "b": []}
     zk.get_lists = AsyncMock(return_value=LISTS)
     zk.get_list_entries = AsyncMock(side_effect=get_list_entries)
-    return ZenkitDataUpdateCoordinator(hass, zk)
+    zk.get_unread_notifications_count = AsyncMock(return_value=2)
+    zk.login = AsyncMock(return_value=USER)
+    zk.get_organization = AsyncMock(return_value=ORGANIZATION)
+    zk.get_organization_members_count = AsyncMock(return_value=2)
+    return ZenkitDataUpdateCoordinator(hass, zk, USER)
 
 
 async def test_update_fetches_all_lists(coordinator):
@@ -99,3 +112,90 @@ async def test_force_refresh_refetches_fields(coordinator):
 
     assert coordinator.zk.get_list_elements.await_count == 2
     assert coordinator.data == {"a": [{"uuid": "a1"}], "b": [{"uuid": "b1"}]}
+
+
+async def test_update_fetches_unread_notifications(coordinator):
+    await coordinator._async_update_data()
+
+    assert coordinator.unread_notifications == 2
+
+
+async def test_failing_notifications_do_not_fail_update(coordinator):
+    coordinator.unread_notifications = 2
+    coordinator.zk.get_unread_notifications_count.side_effect = UpdateFailedException(
+        "down"
+    )
+
+    data = await coordinator._async_update_data()
+
+    assert data == {"a": [{"uuid": "a1"}], "b": [{"uuid": "b1"}]}
+    assert coordinator.unread_notifications is None
+
+
+def test_device_info_is_the_account(coordinator):
+    info = coordinator.device_info
+
+    assert info["identifiers"] == {(DOMAIN, "906842")}
+    assert info["name"] == "User Name"
+    assert info["entry_type"] == DeviceEntryType.SERVICE
+
+
+def test_device_info_falls_back_to_username(coordinator):
+    coordinator.user = {"id": 1, "username": "user", "displayname": ""}
+
+    assert coordinator.device_info["name"] == "user"
+
+
+def test_no_device_info_without_user(hass):
+    assert ZenkitDataUpdateCoordinator(hass, MagicMock()).device_info is None
+
+
+async def test_first_update_fetches_account_and_organization(coordinator):
+    await coordinator._async_update_data()
+
+    coordinator.zk.get_organization.assert_awaited_once_with(560986)
+    coordinator.zk.get_organization_members_count.assert_awaited_once_with(560986)
+    assert coordinator.organization == ORGANIZATION
+    assert coordinator.organization_members == 2
+
+
+async def test_account_is_not_refetched_within_interval(coordinator):
+    await coordinator._async_update_data()
+    coordinator.zk.login = AsyncMock(return_value={**USER, "username": "new"})
+
+    await coordinator._async_update_data()
+
+    coordinator.zk.login.assert_not_awaited()
+    assert coordinator.user == USER
+
+
+async def test_account_is_refetched_after_interval(coordinator, freezer):
+    await coordinator._async_update_data()
+    coordinator.zk.login = AsyncMock(return_value={**USER, "username": "new"})
+    freezer.tick(3600)
+
+    await coordinator._async_update_data()
+
+    assert coordinator.user["username"] == "new"
+
+
+async def test_failed_account_fetch_keeps_last_data(coordinator):
+    coordinator.zk.get_organization.side_effect = UpdateFailedException("down")
+
+    await coordinator._async_update_data()
+
+    assert coordinator.user == USER
+    assert coordinator.organization is None
+
+
+async def test_force_refresh_refetches_account(coordinator):
+    coordinator.zk.get_list_elements = AsyncMock()
+    coordinator.zk.login = AsyncMock(return_value={**USER, "username": "new"})
+
+    await coordinator.async_force_refresh()
+
+    assert coordinator.user["username"] == "new"
+
+
+def test_lists_before_fetch(hass):
+    assert ZenkitDataUpdateCoordinator(hass, MagicMock()).lists == []

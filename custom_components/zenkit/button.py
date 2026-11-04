@@ -28,6 +28,7 @@ class ZenkitRefreshButton(ButtonEntity):
         """Initialize ZenkitRefreshButton."""
         self.coordinator = coordinator
         self._attr_unique_id = f"{entry_id}_refresh"
+        self._attr_device_info = coordinator.device_info
         # Suggested id, else it is derived from the name in the HA language
         self.entity_id = f"button.{DOMAIN}_refresh"
 

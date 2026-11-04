@@ -198,3 +198,7 @@ def test_unavailable_when_only_this_list_failed(entity):
     entity.coordinator.failed_lists = {"list"}
 
     assert not entity.available
+
+
+def test_entity_belongs_to_account_device(entity):
+    assert entity.device_info is entity.coordinator.device_info

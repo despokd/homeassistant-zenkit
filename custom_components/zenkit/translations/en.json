@@ -12,12 +12,97 @@
             "cannot_connect": "Can't connect to Zenkit API. Please try again later.",
             "invalid_auth": "Invalid API token. Please check and try again.",
             "unknown": "Unknown error occurred. Please try again later."
+        },
+        "abort": {
+            "already_configured": "Account is already configured"
         }
     },
     "entity": {
         "button": {
             "refresh": {
                 "name": "Refresh Zenkit data"
+            }
+        },
+        "sensor": {
+            "unread_notifications": {
+                "name": "Unread notifications"
+            },
+            "lists": {
+                "name": "Lists"
+            },
+            "username": {
+                "name": "Username"
+            },
+            "timezone": {
+                "name": "Time zone"
+            },
+            "language": {
+                "name": "Language"
+            },
+            "two_factor_authentication": {
+                "name": "Two-factor authentication",
+                "state": {
+                    "enabled": "Enabled",
+                    "disabled": "Disabled"
+                }
+            },
+            "registered": {
+                "name": "Registered"
+            },
+            "last_login": {
+                "name": "Last login"
+            },
+            "display_name": {
+                "name": "Display name"
+            },
+            "full_name": {
+                "name": "Full name"
+            },
+            "initials": {
+                "name": "Initials"
+            },
+            "email": {
+                "name": "Email"
+            },
+            "apps": {
+                "name": "Apps"
+            },
+            "super_admin": {
+                "name": "Super admin",
+                "state": {
+                    "yes": "Yes",
+                    "no": "No"
+                }
+            },
+            "date_format": {
+                "name": "Date format"
+            },
+            "time_format": {
+                "name": "Time format"
+            },
+            "start_of_week": {
+                "name": "Start of the week"
+            },
+            "organization": {
+                "name": "Organization"
+            },
+            "organization_plan": {
+                "name": "Organization plan"
+            },
+            "organization_members": {
+                "name": "Organization members"
+            },
+            "organization_quotas_exceeded": {
+                "name": "Organization quotas exceeded",
+                "state": {
+                    "yes": "Yes",
+                    "no": "No"
+                }
+            }
+        },
+        "image": {
+            "profile_image": {
+                "name": "Profile image"
             }
         }
     }

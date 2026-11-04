@@ -12,12 +12,97 @@
             "cannot_connect": "Kann keine Verbindung zur Zenkit-API herstellen. Bitte versuchen Sie es später erneut.",
             "invalid_auth": "Ungültiger API-Token. Bitte überprüfen und erneut versuchen.",
             "unknown": "Unbekannter Fehler aufgetreten. Bitte versuchen Sie es später erneut."
+        },
+        "abort": {
+            "already_configured": "Konto ist bereits konfiguriert"
         }
     },
     "entity": {
         "button": {
             "refresh": {
                 "name": "Zenkit-Daten aktualisieren"
+            }
+        },
+        "sensor": {
+            "unread_notifications": {
+                "name": "Ungelesene Benachrichtigungen"
+            },
+            "lists": {
+                "name": "Listen"
+            },
+            "username": {
+                "name": "Benutzername"
+            },
+            "timezone": {
+                "name": "Zeitzone"
+            },
+            "language": {
+                "name": "Sprache"
+            },
+            "two_factor_authentication": {
+                "name": "Zwei-Faktor-Authentifizierung",
+                "state": {
+                    "enabled": "Aktiviert",
+                    "disabled": "Deaktiviert"
+                }
+            },
+            "registered": {
+                "name": "Registriert"
+            },
+            "last_login": {
+                "name": "Letzte Anmeldung"
+            },
+            "display_name": {
+                "name": "Anzeigename"
+            },
+            "full_name": {
+                "name": "Vollständiger Name"
+            },
+            "initials": {
+                "name": "Initialen"
+            },
+            "email": {
+                "name": "E-Mail"
+            },
+            "apps": {
+                "name": "Apps"
+            },
+            "super_admin": {
+                "name": "Super-Admin",
+                "state": {
+                    "yes": "Ja",
+                    "no": "Nein"
+                }
+            },
+            "date_format": {
+                "name": "Datumsformat"
+            },
+            "time_format": {
+                "name": "Zeitformat"
+            },
+            "start_of_week": {
+                "name": "Wochenbeginn"
+            },
+            "organization": {
+                "name": "Organisation"
+            },
+            "organization_plan": {
+                "name": "Organisationstarif"
+            },
+            "organization_members": {
+                "name": "Organisationsmitglieder"
+            },
+            "organization_quotas_exceeded": {
+                "name": "Organisationskontingent überschritten",
+                "state": {
+                    "yes": "Ja",
+                    "no": "Nein"
+                }
+            }
+        },
+        "image": {
+            "profile_image": {
+                "name": "Profilbild"
             }
         }
     }
