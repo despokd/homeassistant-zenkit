@@ -21,7 +21,11 @@ from .elements import (
     status_option,
     title_element,
 )
-from .exceptions import CannotLoginException, UpdateFailedException
+from .exceptions import (
+    CannotConnectException,
+    CannotLoginException,
+    UpdateFailedException,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -109,15 +113,27 @@ class Zenkit:
         self.elements: dict[str, list[dict]] = {}
 
     async def login(self) -> dict:
-        """Login to the Zenkit API."""
+        """Login to the Zenkit API, returns the current user."""
         # https://base.zenkit.com/docs/api/overview/authentication
         url = f"{API_URL}/auth/currentuser"
-        response = await asyncio.to_thread(requests.get, url, headers=self.headers)
+        try:
+            response = await asyncio.to_thread(requests.get, url, headers=self.headers)
+        except RequestException as error:
+            raise CannotConnectException from error
 
-        if type(response.json()) is not dict or response.json().get("username") is None:
+        if response.status_code == 401:
+            raise CannotLoginException
+        if response.status_code != 200:
+            _log_error(response, "Failed to login")
+            raise CannotConnectException
+        try:
+            user = response.json()
+        except ValueError as error:
+            raise CannotConnectException from error
+        if type(user) is not dict or user.get("username") is None:
             raise CannotLoginException
 
-        return response.json()
+        return user
 
     async def get_lists(self) -> dict:
         """Get lists."""

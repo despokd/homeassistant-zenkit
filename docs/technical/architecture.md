@@ -12,7 +12,7 @@ custom_components/zenkit/
 ├── todo.py           # One TodoListEntity per Zenkit list; maps entries <-> TodoItem
 ├── button.py         # Refresh button per entry: drops cached list elements and refreshes all lists
 ├── const.py          # DOMAIN, API_URL, UPDATE_INTERVAL, ENTRIES_LIMIT, RETRY_DELAYS, DUE_DATE_FORMAT, DUE_DATETIME_FORMAT
-├── exceptions.py     # ZenkitException > CannotLoginException, UpdateFailedException
+├── exceptions.py     # ZenkitException > CannotConnectException, CannotLoginException, UpdateFailedException
 ├── manifest.json     # HA manifest (cloud_polling, requires `requests`)
 ├── strings.json      # Config flow strings
 └── translations/     # en, de

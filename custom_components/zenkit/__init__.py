@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import logging
-from aiohttp import ClientError
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_TOKEN, Platform
@@ -12,7 +11,7 @@ from homeassistant.exceptions import ConfigEntryNotReady
 
 from .const import DOMAIN
 from .api import Zenkit
-from .exceptions import CannotLoginException
+from .exceptions import CannotConnectException, CannotLoginException
 from .coordinator import ZenkitDataUpdateCoordinator
 
 _LOGGER = logging.getLogger(__name__)
@@ -27,7 +26,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     try:
         await zk.login()
-    except (TimeoutError, ClientError) as error:
+    except (TimeoutError, CannotConnectException) as error:
         _LOGGER.error("Error connecting to Zenkit api")
         raise ConfigEntryNotReady from error
     except CannotLoginException as error:
