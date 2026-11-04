@@ -105,5 +105,10 @@
         "name": "Profile image"
       }
     }
+  },
+  "exceptions": {
+    "no_status_field": {
+      "message": "{list} has no status field, so its items can't be completed"
+    }
   }
 }

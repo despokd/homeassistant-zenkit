@@ -105,5 +105,10 @@
                 "name": "Profilbild"
             }
         }
+    },
+    "exceptions": {
+        "no_status_field": {
+            "message": "{list} hat kein Statusfeld, daher können Einträge nicht erledigt werden"
+        }
     }
 }
