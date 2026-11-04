@@ -10,4 +10,4 @@ Go to Configuration -> Integrations and click on "add integration". Then search 
 
 ### Refresh button
 
-Data is polled every 60 seconds. Press the __Refresh Zenkit data__ button (entity ID depends on the HA language, e.g. `button.refresh_zenkit_data` or `button.zenkit_daten_aktualisieren`) to update all lists immediately, e.g. after changing list fields in Zenkit. It can also be pressed from automations with the `button.press` action. New lists still require a reload of the integration.
+Data is polled every 60 seconds. Press the __Refresh Zenkit data__ button (`button.zenkit_refresh`) to update all lists immediately, e.g. after changing list fields in Zenkit. It can also be pressed from automations with the `button.press` action. New lists still require a reload of the integration.
