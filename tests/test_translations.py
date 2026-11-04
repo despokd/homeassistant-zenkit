@@ -8,7 +8,7 @@ import pytest
 
 from custom_components.zenkit.api import _folder
 from custom_components.zenkit.sensor import SENSORS
-from custom_components.zenkit.todo import _list_attributes
+from custom_components.zenkit.todo import ITEM_DETAILS, _list_attributes
 
 COMPONENT = Path(__file__).parent.parent / "custom_components" / "zenkit"
 FILES = ["strings.json", "translations/en.json", "translations/de.json"]
@@ -20,6 +20,7 @@ def _attribute_keys() -> dict[tuple[str, str], set[str]]:
     keys = {
         ("todo", "list"): set(_folder(workspace, [workspace]))
         | set(_list_attributes({}))
+        | {ITEM_DETAILS}
     }
     coordinator = MagicMock(user={}, organization={})
     for description in SENSORS:

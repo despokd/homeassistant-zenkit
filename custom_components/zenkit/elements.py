@@ -5,6 +5,9 @@ from .const import COMPLETED_COLOR
 TEXT_ELEMENT = 1
 DATE_ELEMENT = 4
 CATEGORIES_ELEMENT = 6
+HIERARCHY_ELEMENT = 17
+SUBENTRIES_ELEMENT = 18
+DEPENDENCIES_ELEMENT = 19
 
 
 def title_element(elements: list[dict]) -> dict | None:
@@ -39,6 +42,25 @@ def stage_element(elements: list[dict]) -> dict | None:
     return None
 
 
+def subentries_element(elements: list[dict]) -> dict | None:
+    """Get the sub-items element of a list."""
+    return _role_element(elements, "subtasks") or _category_element(
+        elements, SUBENTRIES_ELEMENT
+    )
+
+
+def dependencies_element(elements: list[dict]) -> dict | None:
+    """Get the dependencies element of a list."""
+    return _role_element(elements, "dependencies") or _category_element(
+        elements, DEPENDENCIES_ELEMENT
+    )
+
+
+def hierarchy_element(elements: list[dict]) -> dict | None:
+    """Get the hierarchy element of a list."""
+    return _category_element(elements, HIERARCHY_ELEMENT)
+
+
 def status_option(element: dict, completed: bool) -> dict | None:
     """Get the option for the completed or open status of a status element."""
     options = _status_options(element)
@@ -59,6 +81,11 @@ def _role_element(elements: list[dict], role: str) -> dict | None:
         if element.get("resourceRole") == role:
             return element
     return None
+
+
+def _category_element(elements: list[dict], category: int) -> dict | None:
+    """Get the first element of a category."""
+    return next((e for e in elements if e.get("elementcategory") == category), None)
 
 
 def _unused_element(elements: list[dict], category: int) -> dict | None:

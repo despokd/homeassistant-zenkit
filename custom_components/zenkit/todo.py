@@ -21,9 +21,20 @@ from homeassistant.util import dt as dt_util
 
 from .const import DOMAIN, DUE_DATE_FORMAT, COMPLETED_COLOR
 from .coordinator import ZenkitDataUpdateCoordinator
-from .elements import due_element, notes_element, stage_element, status_option
+from .elements import (
+    dependencies_element,
+    due_element,
+    hierarchy_element,
+    notes_element,
+    stage_element,
+    status_option,
+    subentries_element,
+)
 
 _LOGGER = logging.getLogger(__name__)
+
+# Sub-items, dependencies and checklists per item uid, see _item_details
+ITEM_DETAILS = "item_details"
 
 
 async def async_setup_entry(
@@ -188,6 +199,38 @@ def _due_date(
     return None
 
 
+def _item_details(
+    item: dict[str, Any], elements: list[dict] | None = None
+) -> dict[str, Any]:
+    """Get what a TodoItem can't hold, see docs/zenkit/zenkit-todo.md#sub-items."""
+    details: dict[str, Any] = {}
+    subentries = subentries_element(elements) if elements else None
+    if subentries is not None:
+        if parents := item.get(f"{subentries['uuid']}_parents"):
+            details["parents"] = parents
+        if children := item.get(f"{subentries['uuid']}_references"):
+            details["children"] = children
+    dependencies = dependencies_element(elements) if elements else None
+    if dependencies is not None:
+        if references := item.get(f"{dependencies['uuid']}_references"):
+            details["dependencies"] = references
+    hierarchy = hierarchy_element(elements) if elements else None
+    if hierarchy is not None:
+        if value := item.get(f"{hierarchy['uuid']}_value"):
+            details["hierarchy"] = value
+    checklists = [
+        {
+            "name": checklist.get("name"),
+            "checked": sum(1 for i in checklist.get("items") or [] if i.get("checked")),
+            "total": len(checklist.get("items") or []),
+        }
+        for checklist in item.get("checklists") or []
+    ]
+    if checklists:
+        details["checklists"] = checklists
+    return details
+
+
 def _parse_due(
     item: dict[str, Any], uuid: str
 ) -> datetime.date | datetime.datetime | None:
@@ -252,6 +295,7 @@ class ZenkitTodoListEntity(
         """Handle updated data from the coordinator."""
 
         items = []
+        details = {}
         elements = self._elements
         list_entries = self.coordinator.data.get(self.list_short_id, [])
         for entry in list_entries:
@@ -269,7 +313,13 @@ class ZenkitTodoListEntity(
                     due=_due_date(entry, elements),
                 )
             )
+            if item_details := _item_details(entry, elements):
+                details[entry["uuid"]] = item_details
         self._attr_todo_items = list(items)
+        if details:
+            self._attr_extra_state_attributes[ITEM_DETAILS] = details
+        else:
+            self._attr_extra_state_attributes.pop(ITEM_DETAILS, None)
 
         super()._handle_coordinator_update()
         _LOGGER.debug(

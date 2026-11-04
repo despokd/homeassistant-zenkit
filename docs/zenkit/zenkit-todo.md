@@ -13,6 +13,8 @@
 | `assignments` | 14 | Zugewiesen an | |
 | `files` | 15 | Anhänge | |
 | `tags` | 6 (categories) | Tags | |
+| `subtasks` | 18 (subentries) | Subitems | `<uuid>_references`, `_parents`, `_path`, … (see [Sub-items](#sub-items-dependencies-and-checklists)) |
+| `dependencies` | 19 (dependencies) | Abhängigkeiten | `<uuid>_references`, `_tags`, `_milestone` |
 
 - Lists of type `database` (e.g. created empty) only have `title`; elements without a role return `resourceRole: null`.
 - `isPrimary: true` marks the title element on every list, including `database` lists.
@@ -55,3 +57,37 @@ Text and date fields, verified against a `taskList` (2026-10-25):
 `POST /lists/{shortId}/entries/filter/list` returns at most `limit` entries (the integration uses 100) plus `countData.filteredTotal`; page with `skip`. An empty list returns `listEntries: null`.
 
 Observed 2026-10-25 on a list with 1383 entries (14 pages): 42 pages fetched back to back all returned 200 in 0.12–0.25 s, with no rate-limit or `Retry-After` headers. A page occasionally fails with a body that isn't JSON (seen once in HA, not reproducible), so error bodies must not be parsed as JSON. The rate limits themselves are undocumented in a readable form (#6).
+
+## Sub-items, dependencies and checklists
+
+Observed 2026-11-05 read-only on a `project` list ("testproj") with a Subitems and a Dependencies element and on 15 `taskList`s. No entry had a sub-item or dependency set, so the meaning of the reference keys comes from `GET /api/v1/elementcategories` (public, `businessDataDefinition`) and is not verified with real relations.
+
+Subentries (category 18, `resourceRole: "subtasks"`, `singleton: true`), per entry:
+
+| Key | Example | Meaning (assumed) |
+| --- | --- | --- |
+| `<uuid>_references` | `[]` | uuids of the sub-items (children) |
+| `<uuid>_references_sort` | `[]` | the referenced entries as objects |
+| `<uuid>_parents` | `[]` | uuids of the parent entries |
+| `<uuid>_path` | `"00000003"` | ltree path; a top-level entry has one segment |
+| `<uuid>_sortOrder` | `3` | position among siblings |
+| `<uuid>_connected` | `true` | element `businessData.connected` is `true` too |
+
+Dependencies (category 19, `resourceRole: "dependencies"`, `singleton: true`), per entry: `<uuid>_references` (uuids of the linked entries), `<uuid>_references_sort`, `<uuid>_tags` (`{}`) and `<uuid>_milestone` (`false`). The direction of a dependency is not documented.
+
+Hierarchy (category 17) was on none of the lists. Its category definition has a single text value (`businessDataDefinition.value`, `sortKey: "value"`, filter key `level`), so the entry key is assumed to be `<uuid>_value`.
+
+Checklists are not an element: every entry has a top-level `checklists` array (also `[]` on lists without any):
+
+```json
+"checklists": [
+  {
+    "name": "Checklist",
+    "uuid": "0341d82b-…",
+    "items": [{"text": "…", "checked": false}],
+    "shouldCheckedItemsBeHidden": false
+  }
+]
+```
+
+Checklist items have no uuid. Writing relations or checklists is untested.
