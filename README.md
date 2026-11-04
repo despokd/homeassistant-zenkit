@@ -2,6 +2,8 @@
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Default-41BDF5.svg)](https://github.com/hacs/integration)
 [![GitHub Release](https://img.shields.io/github/v/release/despokd/homeassistant-zenkit)](https://github.com/despokd/homeassistant-zenkit/releases)
+[![HACS Validate](https://github.com/despokd/homeassistant-zenkit/actions/workflows/hacs.yaml/badge.svg)](https://github.com/despokd/homeassistant-zenkit/actions/workflows/hacs.yaml)
+[![CI (hassfest, tests, black)](https://github.com/despokd/homeassistant-zenkit/actions/workflows/CI.yaml/badge.svg)](https://github.com/despokd/homeassistant-zenkit/actions/workflows/CI.yaml)
 
 The `zenkit` integrations adds your lists from [Zenkit](https://zenkit.com) currently as ToDo lists.
 
