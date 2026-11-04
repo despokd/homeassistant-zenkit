@@ -116,6 +116,15 @@
                     "yes": "Yes",
                     "no": "No"
                 }
+            },
+            "open_entries": {
+                "name": "{list} open entries"
+            },
+            "overdue_entries": {
+                "name": "{list} overdue entries"
+            },
+            "entries_due_today": {
+                "name": "{list} entries due today"
             }
         },
         "image": {

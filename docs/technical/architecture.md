@@ -11,7 +11,7 @@ custom_components/zenkit/
 ├── coordinator.py    # DataUpdateCoordinator: polls every UPDATE_INTERVAL s, data = {list shortId: [entries]}, failed_lists; unread_notifications; user + account device_info; refresh of a single list; forced refresh
 ├── todo.py           # One TodoListEntity per Zenkit list; maps entries <-> TodoItem
 ├── button.py         # Refresh button per entry: drops cached list elements and refreshes all lists
-├── sensor.py         # Account and organization sensors per entry, described by SENSORS
+├── sensor.py         # Account and organization sensors per entry (SENSORS); open/overdue/due today counts per list (LIST_SENSORS) from coordinator data, using the todo.py status and due date
 ├── image.py          # Profile image of the account (public URL, no API key)
 ├── diagnostics.py    # Config entry diagnostics: redacted user, lists with element roles, failures
 ├── const.py          # DOMAIN, ZENKIT_URL, API_URL, UPDATE_INTERVAL, USER_UPDATE_INTERVAL, ENTRIES_LIMIT, RETRY_DELAYS, DUE_DATE_FORMAT, DUE_DATETIME_FORMAT

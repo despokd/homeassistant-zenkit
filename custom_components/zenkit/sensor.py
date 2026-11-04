@@ -18,11 +18,14 @@ from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
-from homeassistant.util import dt as dt_util
+from homeassistant.components.todo import TodoItemStatus
+from homeassistant.util import dt as dt_util, slugify
 
 from .api import user_image_url
 from .const import DOMAIN
 from .coordinator import ZenkitDataUpdateCoordinator
+from .elements import due_element
+from .todo import _completion_status, _due_date
 
 # Pixels of the profile image shown as entity picture
 PICTURE_SIZE = 150
@@ -308,6 +311,77 @@ SENSORS: tuple[ZenkitSensorEntityDescription, ...] = (
 )
 
 
+@dataclass(frozen=True)
+class _Counts:
+    """Open entries of a list by due date."""
+
+    open: int = 0
+    overdue: int = 0
+    due_today: int = 0
+
+
+def _count(entries: list[dict], elements: list[dict] | None) -> _Counts:
+    """Count the open entries, with the status and due date as the todo entity."""
+    now = dt_util.now()
+    today = now.date()
+    open = overdue = due_today = 0
+    for entry in entries:
+        if _completion_status(entry, elements) == TodoItemStatus.COMPLETED:
+            continue
+        open += 1
+        due = _due_date(entry, elements)
+        if isinstance(due, datetime.datetime):
+            overdue += due < now
+            due_today += due.date() == today
+        elif isinstance(due, datetime.date):
+            # A date without time is overdue once its day is over
+            overdue += due < today
+            due_today += due == today
+    return _Counts(open, overdue, due_today)
+
+
+def _has_due(coordinator: ZenkitDataUpdateCoordinator, list_short_id: str) -> bool:
+    """Whether a list has a due date field, assumed until its fields are fetched."""
+    elements = coordinator.zk.elements.get(list_short_id)
+    return elements is None or due_element(elements) is not None
+
+
+@dataclass(frozen=True, kw_only=True)
+class ZenkitListSensorEntityDescription(SensorEntityDescription):
+    """A count of the entries of a Zenkit list."""
+
+    value_fn: Callable[[_Counts], int]
+    # Only for lists with a due date field
+    needs_due: bool = False
+
+
+LIST_SENSORS: tuple[ZenkitListSensorEntityDescription, ...] = (
+    ZenkitListSensorEntityDescription(
+        key="open_entries",
+        translation_key="open_entries",
+        icon="mdi:checkbox-blank-outline",
+        state_class=SensorStateClass.MEASUREMENT,
+        value_fn=lambda counts: counts.open,
+    ),
+    ZenkitListSensorEntityDescription(
+        key="overdue_entries",
+        translation_key="overdue_entries",
+        icon="mdi:calendar-alert",
+        state_class=SensorStateClass.MEASUREMENT,
+        value_fn=lambda counts: counts.overdue,
+        needs_due=True,
+    ),
+    ZenkitListSensorEntityDescription(
+        key="entries_due_today",
+        translation_key="entries_due_today",
+        icon="mdi:calendar-today",
+        state_class=SensorStateClass.MEASUREMENT,
+        value_fn=lambda counts: counts.due_today,
+        needs_due=True,
+    ),
+)
+
+
 async def async_setup_entry(
     hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
 ) -> None:
@@ -316,6 +390,12 @@ async def async_setup_entry(
     async_add_entities(
         ZenkitSensor(coordinator, entry.entry_id, description)
         for description in SENSORS
+    )
+    async_add_entities(
+        ZenkitListSensor(coordinator, list, description)
+        for list in coordinator.lists
+        for description in LIST_SENSORS
+        if not description.needs_due or _has_due(coordinator, list["shortId"])
     )
 
 
@@ -362,3 +442,45 @@ class ZenkitSensor(CoordinatorEntity[ZenkitDataUpdateCoordinator], SensorEntity)
         if self.entity_description.picture_fn is None:
             return None
         return self.entity_description.picture_fn(self.coordinator)
+
+
+class ZenkitListSensor(CoordinatorEntity[ZenkitDataUpdateCoordinator], SensorEntity):
+    """A count of the entries of a Zenkit list, see docs/user/configuration.md."""
+
+    _attr_has_entity_name = True
+    entity_description: ZenkitListSensorEntityDescription
+
+    def __init__(
+        self,
+        coordinator: ZenkitDataUpdateCoordinator,
+        list: dict[str, Any],
+        description: ZenkitListSensorEntityDescription,
+    ) -> None:
+        """Initialize ZenkitListSensor."""
+        super().__init__(coordinator=coordinator)
+        self.entity_description = description
+        self.list_short_id = list["shortId"]
+        self._attr_unique_id = f"{list['uuid']}_{description.key}"
+        # Same device as the todo entity of the list
+        self._attr_device_info = coordinator.device_info
+        self._attr_translation_placeholders = {"list": list["name"]}
+        # Suggested id, else it is derived from the name in the HA language
+        self.entity_id = f"sensor.{DOMAIN}_{slugify(list['name'])}_{description.key}"
+
+    @property
+    def available(self) -> bool:
+        """Unavailable while only this list fails to load, as its todo entity."""
+        return (
+            super().available
+            and self.list_short_id not in self.coordinator.failed_lists
+            and self.list_short_id in (self.coordinator.data or {})
+        )
+
+    @property
+    def native_value(self) -> int | None:
+        """Return the count from the entries of the coordinator."""
+        entries = (self.coordinator.data or {}).get(self.list_short_id)
+        if entries is None:
+            return None
+        elements = self.coordinator.zk.elements.get(self.list_short_id)
+        return self.entity_description.value_fn(_count(entries, elements))

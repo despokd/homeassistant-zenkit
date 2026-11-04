@@ -37,7 +37,7 @@ Data is polled every 60 seconds. Press the __Refresh Zenkit data__ button (`butt
 
 ### Account device
 
-The integration adds one device per Zenkit account, named after your Zenkit display name. All lists, the refresh button, the account sensors and the profile image belong to it. With the device, list names shown in Home Assistant get the device name as prefix, e.g. "Jane Doe Groceries". Entity ids of existing lists stay the same.
+The integration adds one device per Zenkit account, named after your Zenkit display name. All lists, the refresh button, the account and list sensors and the profile image belong to it. With the device, list names shown in Home Assistant get the device name as prefix, e.g. "Jane Doe Groceries". Entity ids of existing lists stay the same.
 
 Each Zenkit account can only be added once.
 
@@ -77,6 +77,18 @@ triggers:
     entity_id: sensor.zenkit_unread_notifications
     above: 0
 ```
+
+### List sensors
+
+Each list gets sensors counting its open items, with the same status and due date as the todo entity:
+
+| Entity | Value |
+| --- | --- |
+| `sensor.zenkit_<list>_open_entries` | Open items, all items for lists without status |
+| `sensor.zenkit_<list>_overdue_entries` | Open items due before now. Items with only a date are overdue from the next day |
+| `sensor.zenkit_<list>_entries_due_today` | Open items due today, including ones due earlier today |
+
+Lists without a due date field only get the open count. The counts update with each poll, and a list that fails to load makes its sensors unavailable. They belong to the account device.
 
 ### Diagnostics
 
