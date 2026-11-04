@@ -167,3 +167,4 @@ homeassistant/
 # Agents
 temp.md
 plan/*
+.claude/launch.json
