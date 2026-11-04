@@ -6,6 +6,7 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 
 from homeassistant.components.todo import TodoItem, TodoItemStatus
+from homeassistant.exceptions import ServiceValidationError
 
 from custom_components.zenkit.todo import ZenkitTodoListEntity
 
@@ -169,6 +170,70 @@ async def test_status_is_read_by_role(entity_with_fields):
     await entity_with_fields.async_update_todo_item(_item(**_kwargs()))
 
     entity_with_fields.coordinator.zk.update_entry.assert_not_awaited()
+
+
+@pytest.fixture
+def entity_without_status(entity):
+    """Todo entity whose list has no status field."""
+    entity.coordinator.zk.elements = {"list": ELEMENTS[:3]}
+    return entity
+
+
+def _items(entity):
+    entity.async_write_ha_state = MagicMock()
+    entity._handle_coordinator_update()
+    return entity.todo_items
+
+
+def test_items_without_status_field_have_no_status(entity_without_status):
+    assert [item.status for item in _items(entity_without_status)] == [None]
+
+
+def test_items_without_done_option_have_no_status(entity):
+    stage = {**ELEMENTS[3], "elementData": {"predefinedCategories": [{"id": 1}]}}
+    entity.coordinator.zk.elements = {"list": [*ELEMENTS[:3], stage]}
+
+    assert [item.status for item in _items(entity)] == [None]
+
+
+def test_items_with_status_field_have_status(entity_with_fields):
+    assert [item.status for item in _items(entity_with_fields)] == [
+        TodoItemStatus.NEEDS_ACTION
+    ]
+
+
+async def test_unchanged_item_without_status_field_is_not_written(
+    entity_without_status,
+):
+    await entity_without_status.async_update_todo_item(_item(status=None))
+
+    entity_without_status.coordinator.zk.update_entry.assert_not_awaited()
+
+
+async def test_open_item_without_status_field_is_not_written(entity_without_status):
+    # The indeterminate checkbox of an item without status sends needs_action
+    await entity_without_status.async_update_todo_item(_item())
+
+    entity_without_status.coordinator.zk.update_entry.assert_not_awaited()
+
+
+async def test_complete_item_without_status_field_fails(entity_without_status):
+    with pytest.raises(ServiceValidationError):
+        await entity_without_status.async_update_todo_item(
+            _item(status=TodoItemStatus.COMPLETED)
+        )
+
+    entity_without_status.coordinator.zk.update_entry.assert_not_awaited()
+
+
+async def test_rename_item_without_status_field(entity_without_status):
+    await entity_without_status.async_update_todo_item(
+        _item(summary="Buy oat milk", status=None)
+    )
+
+    entity_without_status.coordinator.zk.update_entry.assert_awaited_once_with(
+        "list", "entry-uuid", name="Buy oat milk"
+    )
 
 
 async def test_create_item_with_fields(entity):

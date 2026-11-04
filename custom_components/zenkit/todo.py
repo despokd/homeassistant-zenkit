@@ -14,6 +14,7 @@ from homeassistant.components.todo import (
 )
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.util import dt as dt_util
@@ -98,10 +99,20 @@ def _list_icon(list: dict[str, Any]) -> str | None:
     return f"mdi:{class_name}"
 
 
+def _supports_completion(elements: list[dict] | None) -> bool:
+    """Whether a list has a status field with a done option, assumed until fetched."""
+    if elements is None:
+        return True
+    stage = stage_element(elements)
+    return stage is not None and status_option(stage, True) is not None
+
+
 def _completion_status(
     item: dict[str, Any], elements: list[dict] | None = None
-) -> TodoItemStatus:
-    """Get the state of an entry by its status field."""
+) -> TodoItemStatus | None:
+    """Get the state of an entry by its status field, None if the list has none."""
+    if not _supports_completion(elements):
+        return None
     stage = stage_element(elements) if elements else None
     done = status_option(stage, True) if stage else None
     if done is not None and f"{stage['uuid']}_categories" in item:
@@ -294,7 +305,15 @@ class ZenkitTodoListEntity(
         if entry is None or item.summary != entry["displayString"]:
             changes["name"] = item.summary
         if entry is None or item.status != _completion_status(entry, elements):
-            changes["completed"] = item.status == TodoItemStatus.COMPLETED
+            if _supports_completion(elements):
+                changes["completed"] = item.status == TodoItemStatus.COMPLETED
+            elif item.status == TodoItemStatus.COMPLETED:
+                raise ServiceValidationError(
+                    translation_domain=DOMAIN,
+                    translation_key="no_status_field",
+                    translation_placeholders={"list": self.name},
+                )
+            # Open on a list without status field, as the indeterminate checkbox sends
         description = _description(entry, elements) if entry else None
         if (item.description or None) != description:
             changes["description"] = item.description
