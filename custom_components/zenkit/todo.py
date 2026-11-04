@@ -31,7 +31,7 @@ async def async_setup_entry(
     """Set up the Zenkit todo platform config entry."""
     coordinator = hass.data[DOMAIN][entry.entry_id]
 
-    lists = await coordinator.zk.get_lists()
+    lists = await coordinator.async_get_lists()
     if lists is None:
         _LOGGER.warning("No lists found")
         return False
@@ -49,6 +49,7 @@ async def async_setup_entry(
                 list["uuid"],
                 list["name"],
                 _list_icon(list),
+                list.get("_folder"),
             )
         )
 
@@ -200,6 +201,7 @@ class ZenkitTodoListEntity(
         list_uuid: str,
         list_name: str,
         icon: str | None = None,
+        folder: dict[str, Any] | None = None,
     ) -> None:
         """Initialize TodoistTodoListEntity."""
         super().__init__(coordinator=coordinator)
@@ -212,6 +214,8 @@ class ZenkitTodoListEntity(
         self._attr_todo_items = None
         self._attr_icon = icon
         self._attr_device_info = coordinator.device_info
+        # Workspace and folder path, see docs/user/configuration.md
+        self._attr_extra_state_attributes = dict(folder or {})
 
         _LOGGER.debug("Created list %s (%s)", list_short_id, list_name)
 
