@@ -7,3 +7,4 @@ Documents Zenkit API quirks and missing documentation at [Zenkit](https://todo.z
   - [Status](zenkit-todo.md#status)
   - [Writing entries](zenkit-todo.md#writing-entries)
   - [Reading entries](zenkit-todo.md#reading-entries)
+- [Workspaces and folders](workspaces.md)
