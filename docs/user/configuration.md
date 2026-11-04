@@ -17,6 +17,14 @@ Each todo entity has attributes for where its list is in Zenkit:
 - __folder_id__: Zenkit id of that folder, `null` if none
 - __folder_path__: folder names from the workspace down to the list, e.g. `["Garden", "Beds"]`, `[]` if none
 
+How the list looks in Zenkit, each `null` if unset:
+
+- __description__: list description
+- __icon_class__: Font Awesome class of the list icon, e.g. `fa fa-plane`. The entity icon is an MDI icon guessed from it
+- __icon_color__ / __icon_background_color__: hex colors of the icon and behind it, e.g. `#3ba744`
+- __image_id__ / __cover_image_id__: Zenkit file id of the list image and cover image. The images themselves need your API key, so Home Assistant can't show them yet
+- __background_id__: Zenkit id of the list background
+
 Example template: `{{ state_attr('todo.groceries', 'folder_path') | join(' / ') }}`. Renamed or moved lists and folders are picked up after a reload of the integration.
 
 ### Lists without status
