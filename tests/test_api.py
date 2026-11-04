@@ -394,3 +394,71 @@ async def test_get_organization_members_count(requests_mock):
 )
 def test_user_image_url(user, url):
     assert user_image_url(user, 64) == url
+
+
+def _workspace(id, name, parent=None, lists=()):
+    return {
+        "id": id,
+        "name": name,
+        "resourceType": "folder",
+        "parentWorkspaceId": parent,
+        "lists": [{"id": list_id, "name": f"List {list_id}"} for list_id in lists],
+    }
+
+
+def _workspaces(requests_mock, *workspaces):
+    requests_mock.get.side_effect = lambda url, **kwargs: _response(list(workspaces))
+
+
+async def test_get_lists_adds_folders(requests_mock):
+    _workspaces(
+        requests_mock,
+        _workspace(1, "Home", lists=[10]),
+        _workspace(2, "Garden", parent=1, lists=[20]),
+        _workspace(3, "Beds", parent=2, lists=[30]),
+    )
+
+    lists = await Zenkit("key").get_lists()
+
+    assert [list["id"] for list in lists] == [10, 20, 30]
+    assert [list["_folder"] for list in lists] == [
+        {"workspace": "Home", "folder": None, "folder_id": None, "folder_path": []},
+        {
+            "workspace": "Home",
+            "folder": "Garden",
+            "folder_id": 2,
+            "folder_path": ["Garden"],
+        },
+        {
+            "workspace": "Home",
+            "folder": "Beds",
+            "folder_id": 3,
+            "folder_path": ["Garden", "Beds"],
+        },
+    ]
+
+
+async def test_get_lists_unknown_parent_is_top_level(requests_mock):
+    _workspaces(requests_mock, _workspace(2, "Shared", parent=99, lists=[20]))
+
+    lists = await Zenkit("key").get_lists()
+
+    assert lists[0]["_folder"]["workspace"] == "Shared"
+    assert lists[0]["_folder"]["folder_path"] == []
+
+
+async def test_get_lists_parent_cycle_stops(requests_mock):
+    _workspaces(
+        requests_mock,
+        _workspace(1, "A", parent=2, lists=[10]),
+        _workspace(2, "B", parent=1),
+    )
+
+    lists = await Zenkit("key").get_lists()
+
+    assert lists[0]["_folder"] == {
+        "workspace": "B",
+        "folder": "A",
+        "folder_id": 1,
+        "folder_path": ["A"],
+    }

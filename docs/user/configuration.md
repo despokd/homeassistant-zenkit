@@ -8,6 +8,17 @@ Go to Configuration -> Integrations and click on "add integration". Then search 
 
 - __token__: Your API Key from Your Account > Integrations > API Key
 
+### List attributes
+
+Each todo entity has attributes for where its list is in Zenkit:
+
+- __workspace__: name of the top-level workspace
+- __folder__: name of the folder the list is directly in, `null` if it is directly in the workspace
+- __folder_id__: Zenkit id of that folder, `null` if none
+- __folder_path__: folder names from the workspace down to the list, e.g. `["Garden", "Beds"]`, `[]` if none
+
+Example template: `{{ state_attr('todo.groceries', 'folder_path') | join(' / ') }}`. Renamed or moved lists and folders are picked up after a reload of the integration.
+
 ### Refresh button
 
 Data is polled every 60 seconds. Press the __Refresh Zenkit data__ button (`button.zenkit_refresh`) to update all lists immediately, e.g. after changing list fields in Zenkit. It can also be pressed from automations with the `button.press` action. New lists still require a reload of the integration.

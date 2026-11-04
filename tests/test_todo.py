@@ -202,3 +202,22 @@ def test_unavailable_when_only_this_list_failed(entity):
 
 def test_entity_belongs_to_account_device(entity):
     assert entity.device_info is entity.coordinator.device_info
+
+
+def test_folder_attributes():
+    folder = {
+        "workspace": "Home",
+        "folder": "Beds",
+        "folder_id": 3,
+        "folder_path": ["Garden", "Beds"],
+    }
+
+    entity = ZenkitTodoListEntity(
+        MagicMock(), "1", "list", "list-uuid", "List", folder=folder
+    )
+
+    assert entity.extra_state_attributes == folder
+
+
+def test_no_folder_attributes_without_folder(entity):
+    assert entity.extra_state_attributes == {}

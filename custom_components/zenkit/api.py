@@ -106,6 +106,25 @@ def _due_fields(uuid: str, due: datetime.date | None) -> dict:
     return {f"{uuid}_date": value, f"{uuid}_hasTime": False}
 
 
+def _folder(workspace: dict, workspaces: list[dict]) -> dict:
+    """Get the top-level workspace and folder path of the lists in a workspace."""
+    # Folders are nested workspaces, top-level ones are of type "folder" too,
+    # so only `parentWorkspaceId` tells them apart (docs/zenkit/workspaces.md)
+    by_id = {w["id"]: w for w in workspaces}
+    path = [workspace]
+    while (
+        parent := by_id.get(path[0].get("parentWorkspaceId"))
+    ) and parent not in path:
+        path.insert(0, parent)
+    folders = path[1:]
+    return {
+        "workspace": path[0]["name"],
+        "folder": folders[-1]["name"] if folders else None,
+        "folder_id": folders[-1]["id"] if folders else None,
+        "folder_path": [folder["name"] for folder in folders],
+    }
+
+
 class Zenkit:
     """Class to manage fetching Zenkit data with API key authentication."""
 
@@ -192,8 +211,9 @@ class Zenkit:
         workspaces = response.json()
         lists = []
         for workspace in workspaces:
+            folder = _folder(workspace, workspaces)
             for list in workspace["lists"]:
-                lists.append(list)
+                lists.append({**list, "_folder": folder})
         return lists
 
     async def get_list_entries(self, list_short_id: str) -> list[dict]:
