@@ -24,6 +24,8 @@ Key facts:
 
 Docker compose at `localhost:8123` with user `docker` password `docker`. Access via API. Zenkit API key will be added by user at HA.
 
+After changing code in `custom_components/zenkit/`, restart the local HA instance so it loads the mounted code (a config entry reload does not re-import changed modules): call the `homeassistant.restart` service via the HA API and wait until `/api/config` responds again. Note that HA keeps the entity ID of an entity it has seen before, so changed entity ID logic only shows for new entities.
+
 Tests: `python3 -m venv .venv && .venv/bin/pip install -r requirements_test.txt`, then `.venv/bin/python -m pytest`. Formatting is checked with `black`.
 
 ## TODOs
