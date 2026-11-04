@@ -13,5 +13,12 @@
             "invalid_auth": "Ungültiger API-Token. Bitte überprüfen und erneut versuchen.",
             "unknown": "Unbekannter Fehler aufgetreten. Bitte versuchen Sie es später erneut."
         }
+    },
+    "entity": {
+        "button": {
+            "refresh": {
+                "name": "Zenkit-Daten aktualisieren"
+            }
+        }
     }
 }

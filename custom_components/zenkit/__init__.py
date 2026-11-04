@@ -16,7 +16,7 @@ from .exceptions import CannotLoginException
 from .coordinator import ZenkitDataUpdateCoordinator
 
 _LOGGER = logging.getLogger(__name__)
-PLATFORMS: list[Platform] = [Platform.TODO]
+PLATFORMS: list[Platform] = [Platform.BUTTON, Platform.TODO]
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:

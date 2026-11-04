@@ -84,6 +84,11 @@ class ZenkitDataUpdateCoordinator(DataUpdateCoordinator[dict]):
             data[list_short_id] = entries
         self.async_set_updated_data(data)
 
+    async def async_force_refresh(self) -> None:
+        """Fetch the fields and entries of all lists now, bypassing the cache."""
+        self.zk.elements.clear()
+        await self.async_refresh()
+
     async def _async_fetch_entries(
         self, list_short_id: str, name: str
     ) -> list[dict] | None:
