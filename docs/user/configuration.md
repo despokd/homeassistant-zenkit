@@ -31,13 +31,33 @@ Example template: `{{ state_attr('todo.groceries', 'folder_path') | join(' / ') 
 
 Items are completed by the list's status field. Lists without one (or without a done status) show their items in a separate section with an indeterminate checkbox (neither checked nor unchecked). Clicking it changes nothing in Zenkit, but the card shows it ticked until the page is reloaded. Completing an item through an action shows an error. The entity state counts only open items, so it is `0` for these lists.
 
+### Calendars
+
+Each list with a due date field also gets a read-only calendar entity, e.g. `calendar.jane_doe_groceries`. Its events are the open items with a due date:
+
+- Items with a date only are all-day events, items with a time are events at that point in time (Zenkit stores the time in UTC, Home Assistant shows it in its time zone).
+- Items with a date range span from the start to the end date.
+- Completed items, items without due date and deleted items are not shown.
+- The event description is the item description. The calendar color starts as the icon color of the list.
+
+The calendar is `on` while an event is ongoing, which for all-day items is the whole due day. Use it in calendar triggers, e.g. for a notification on the due day:
+
+```yaml
+triggers:
+  - trigger: calendar
+    event: start
+    entity_id: calendar.jane_doe_groceries
+```
+
+Lists whose fields could not be loaded at setup get their calendar after a reload of the integration.
+
 ### Refresh button
 
 Data is polled every 60 seconds. Press the __Refresh Zenkit data__ button (`button.zenkit_refresh`) to update all lists immediately, e.g. after changing list fields in Zenkit. It can also be pressed from automations with the `button.press` action. New lists still require a reload of the integration.
 
 ### Account device
 
-The integration adds one device per Zenkit account, named after your Zenkit display name. All lists, the refresh button, the account sensors and the profile image belong to it. With the device, list names shown in Home Assistant get the device name as prefix, e.g. "Jane Doe Groceries". Entity ids of existing lists stay the same.
+The integration adds one device per Zenkit account, named after your Zenkit display name. All lists, their calendars, the refresh button, the account sensors and the profile image belong to it. With the device, list names shown in Home Assistant get the device name as prefix, e.g. "Jane Doe Groceries". Entity ids of existing lists stay the same.
 
 Each Zenkit account can only be added once.
 

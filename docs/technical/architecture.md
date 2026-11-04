@@ -4,12 +4,13 @@
 
 ```
 custom_components/zenkit/
-├── __init__.py       # Entry setup: login, create coordinator, forward to BUTTON, IMAGE, SENSOR and TODO platforms; backfills unique_id; config entry migration
+├── __init__.py       # Entry setup: login, create coordinator, forward to BUTTON, CALENDAR, IMAGE, SENSOR and TODO platforms; backfills unique_id; config entry migration
 ├── config_flow.py    # UI setup: asks for API key (CONF_TOKEN), validates via login, unique_id = Zenkit user id (one entry per account), titles entry with username
 ├── api.py            # Zenkit REST client (sync `requests` wrapped in asyncio.to_thread), caches list elements
 ├── elements.py       # Finds the title/notes/due/status elements of a list by role, with fallbacks
 ├── coordinator.py    # DataUpdateCoordinator: polls every UPDATE_INTERVAL s, data = {list shortId: [entries]}, failed_lists; unread_notifications; user + account device_info; refresh of a single list; forced refresh
 ├── todo.py           # One TodoListEntity per Zenkit list; maps entries <-> TodoItem
+├── calendar.py     # Read-only CalendarEntity per list with a due date field; events are the open entries with a due date, from coordinator data
 ├── button.py         # Refresh button per entry: drops cached list elements and refreshes all lists
 ├── sensor.py         # Account and organization sensors per entry, described by SENSORS
 ├── image.py          # Profile image of the account (public URL, no API key)
