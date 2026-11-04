@@ -11,6 +11,7 @@ Zenkit lists have user-defined fields, keyed `<elementUuid>_<type>`. Fields are 
 | `due`         | `dueDate`                      | first date element without role                 | `<uuid>_date`, `_hasTime`    |
 | entity icon   | list `iconClassNames` (Font Awesome) converted to `mdi:*` |                      |                              |
 | entity attributes | list `workspaceId`, workspaces' `parentWorkspaceId` ([Workspaces and folders](../zenkit/workspaces.md)) |  | `workspace`, `folder`, `folder_id`, `folder_path` |
+| entity attributes | list `description`, `iconClassNames`, `iconColor`, `iconBackgroundColor`, `imageId`, `coverImageId`, `backgroundId` ([Lists](../zenkit/lists.md)) |  | `description`, `icon_class`, `icon_color`, `icon_background_color`, `image_id`, `cover_image_id`, `background_id` |
 
 - `due` is a `date`, or a local `datetime` if `_hasTime` is set (Zenkit stores it in UTC).
 - An empty description (`""`) is shown as none.

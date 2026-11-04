@@ -8,7 +8,7 @@ import pytest
 from homeassistant.components.todo import TodoItem, TodoItemStatus
 from homeassistant.exceptions import ServiceValidationError
 
-from custom_components.zenkit.todo import ZenkitTodoListEntity
+from custom_components.zenkit.todo import ZenkitTodoListEntity, _list_attributes
 
 STAGE = "stage-uuid"
 NOTES = "notes-uuid"
@@ -269,19 +269,48 @@ def test_entity_belongs_to_account_device(entity):
     assert entity.device_info is entity.coordinator.device_info
 
 
-def test_folder_attributes():
-    folder = {
+def test_attributes():
+    attributes = {
         "workspace": "Home",
         "folder": "Beds",
         "folder_id": 3,
         "folder_path": ["Garden", "Beds"],
+        "icon_color": "#ff0000",
     }
 
     entity = ZenkitTodoListEntity(
-        MagicMock(), "1", "list", "list-uuid", "List", folder=folder
+        MagicMock(), "1", "list", "list-uuid", "List", attributes=attributes
     )
 
-    assert entity.extra_state_attributes == folder
+    assert entity.extra_state_attributes == attributes
+
+
+def test_list_attributes():
+    list = {
+        "description": "Weekly shopping",
+        "iconClassNames": "fa-shopping-cart",
+        "iconColor": "#ffffff",
+        "iconBackgroundColor": "#3ba744",
+        "imageId": 123,
+        "coverImageId": 456,
+        "backgroundId": "bg1",
+    }
+
+    assert _list_attributes(list) == {
+        "description": "Weekly shopping",
+        "icon_class": "fa-shopping-cart",
+        "icon_color": "#ffffff",
+        "icon_background_color": "#3ba744",
+        "image_id": 123,
+        "cover_image_id": 456,
+        "background_id": "bg1",
+    }
+
+
+def test_list_attributes_unset():
+    list = {"description": "", "iconColor": None, "imageId": 0, "coverImageId": 0}
+
+    assert set(_list_attributes(list).values()) == {None}
 
 
 def test_no_folder_attributes_without_folder(entity):

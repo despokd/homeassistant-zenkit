@@ -50,7 +50,7 @@ async def async_setup_entry(
                 list["uuid"],
                 list["name"],
                 _list_icon(list),
-                list.get("_folder"),
+                {**(list.get("_folder") or {}), **_list_attributes(list)},
             )
         )
 
@@ -61,6 +61,21 @@ async def async_setup_entry(
         return False
 
     return True
+
+
+def _list_attributes(list: dict[str, Any]) -> dict[str, Any]:
+    """Get the appearance of a list in Zenkit, see docs/zenkit/lists.md."""
+    return {
+        # Zenkit returns "" for a cleared text
+        "description": list.get("description") or None,
+        "icon_class": list.get("iconClassNames") or None,
+        "icon_color": list.get("iconColor") or None,
+        "icon_background_color": list.get("iconBackgroundColor") or None,
+        # File ids, the files need the API key (docs/zenkit/lists.md#images)
+        "image_id": list.get("imageId") or None,
+        "cover_image_id": list.get("coverImageId") or None,
+        "background_id": list.get("backgroundId") or None,
+    }
 
 
 def _list_icon(list: dict[str, Any]) -> str | None:
@@ -195,6 +210,8 @@ class ZenkitTodoListEntity(
     """An Zenkit TodoListEntity."""
 
     _attr_has_entity_name = True
+    # Only for the attribute names, the name is the list name
+    _attr_translation_key = "list"
     _attr_supported_features = (
         TodoListEntityFeature.CREATE_TODO_ITEM
         | TodoListEntityFeature.UPDATE_TODO_ITEM
@@ -212,7 +229,7 @@ class ZenkitTodoListEntity(
         list_uuid: str,
         list_name: str,
         icon: str | None = None,
-        folder: dict[str, Any] | None = None,
+        attributes: dict[str, Any] | None = None,
     ) -> None:
         """Initialize TodoistTodoListEntity."""
         super().__init__(coordinator=coordinator)
@@ -225,8 +242,8 @@ class ZenkitTodoListEntity(
         self._attr_todo_items = None
         self._attr_icon = icon
         self._attr_device_info = coordinator.device_info
-        # Workspace and folder path, see docs/user/configuration.md
-        self._attr_extra_state_attributes = dict(folder or {})
+        # Folder path and appearance, see docs/user/configuration.md
+        self._attr_extra_state_attributes = dict(attributes or {})
 
         _LOGGER.debug("Created list %s (%s)", list_short_id, list_name)
 

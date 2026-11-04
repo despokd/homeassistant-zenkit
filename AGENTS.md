@@ -14,6 +14,7 @@ Key facts:
 - After any write, entities call `coordinator.async_refresh_list(shortId)`. A list that fails to load only makes its own entity unavailable (`coordinator.failed_lists`).
 - Zenkit API quirks and undocumented behavior go in [docs/zenkit/](docs/zenkit/README.md).
 - docs have a README.md in each directory as starting point
+- Every entity attribute needs a translated name (`entity.<platform>.<translation_key>.state_attributes.<attribute>.name`) in `strings.json`, `translations/en.json` and `translations/de.json`. The entity needs a `translation_key` for this. `tests/test_translations.py` checks it.
 
 ## Resources
 

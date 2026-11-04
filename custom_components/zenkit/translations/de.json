@@ -62,10 +62,20 @@
                 "name": "Initialen"
             },
             "email": {
-                "name": "E-Mail"
+                "name": "E-Mail",
+                "state_attributes": {
+                    "emails": {
+                        "name": "E-Mail-Adressen"
+                    }
+                }
             },
             "apps": {
-                "name": "Apps"
+                "name": "Apps",
+                "state_attributes": {
+                    "apps": {
+                        "name": "Apps"
+                    }
+                }
             },
             "super_admin": {
                 "name": "Super-Admin",
@@ -84,7 +94,15 @@
                 "name": "Wochenbeginn"
             },
             "organization": {
-                "name": "Organisation"
+                "name": "Organisation",
+                "state_attributes": {
+                    "id": {
+                        "name": "ID"
+                    },
+                    "description": {
+                        "name": "Beschreibung"
+                    }
+                }
             },
             "organization_plan": {
                 "name": "Organisationstarif"
@@ -103,6 +121,45 @@
         "image": {
             "profile_image": {
                 "name": "Profilbild"
+            }
+        },
+        "todo": {
+            "list": {
+                "state_attributes": {
+                    "workspace": {
+                        "name": "Arbeitsbereich"
+                    },
+                    "folder": {
+                        "name": "Ordner"
+                    },
+                    "folder_id": {
+                        "name": "Ordner-ID"
+                    },
+                    "folder_path": {
+                        "name": "Ordnerpfad"
+                    },
+                    "description": {
+                        "name": "Beschreibung"
+                    },
+                    "icon_class": {
+                        "name": "Symbolklasse"
+                    },
+                    "icon_color": {
+                        "name": "Symbolfarbe"
+                    },
+                    "icon_background_color": {
+                        "name": "Symbolhintergrundfarbe"
+                    },
+                    "image_id": {
+                        "name": "Bild-ID"
+                    },
+                    "cover_image_id": {
+                        "name": "Titelbild-ID"
+                    },
+                    "background_id": {
+                        "name": "Hintergrund-ID"
+                    }
+                }
             }
         }
     },
