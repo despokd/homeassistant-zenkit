@@ -23,8 +23,25 @@ Observed with an API key (`Zenkit-API-Key` header) in November 2026.
 | `emails` | `[{email, isPrimary, isVerified, ...}]` | Personal data |
 | `settings.recentListShortIds`, `recentListEntries`, `recentGlobalSearchQueries` | | Usage history |
 | `settings.sortedWorkspaceIds` | `[1187910, ...]` | Workspace order in the sidebar; missing in an earlier response of the same account |
-| `isSuperAdmin`, `isPasswordGenerated` | bool | |
+| `isSuperAdmin`, `isPasswordGenerated` | bool | `isSuperAdmin` is likely a Zenkit platform flag, not the organization role (that is `roleId` in [accesses](#access-and-notifications)) |
+| `isImagePreferred` | bool | See [Profile image](#profile-image) |
+| `privacy_policy_accepted_at`, `terms_accepted_at` | ISO str | |
+| `blocked_at`, `blocked_by_organization_at` | ISO str or `null` | `null` for an active account |
+| `providers` | `[]` | Presumably external sign-in providers; empty for an email/password account |
+| `tokens` | | Sensitive |
+| `abTests`, `backgroundId` | `null` | |
 | `settings.notificationSettings` | `{general, activities, comments, mentions, reminders, reactions}` | Each `{email, toast, notification, desktopNotification, pushNotification}` |
+| `settings.notificationSettingsPerList`, `notificationSettingsPerWorkspace` | dict | |
+| `settings.decimalFormat` | `0` (int) | |
+| `settings.defaultSortOrderForNewEntries` | `lowest` | |
+| `settings.listActivityFilter`, `listEntryActivityFilter`, `userActivityFilter`, `workspaceActivityFilter` | int | |
+| `settings.recentListsSettings`, `userFilesSettings` | dict | |
+| `settings.assignmentsViewSettings`, `userCalendarSettings`, `userTagsSettings` | dict or `null` | |
+| `settings.soundEnabled`, `useDockedChats` | bool | |
+| `settings.releaseNotesWatermark` | ISO str | |
+| `settings.listElementSettingsInfoDismissed`, `textfieldInfoDismissed`, `themeOnboardingDismissed`, `userAssignmentsInfoDismissed`, `userTagsInfoDismissed` | bool | Web app hints dismissed |
+
+There is no separate first name or last name field; `fullname` is whatever the user entered as name.
 
 Redact `api_key`, `emails`, `tokens` and the `recent*` settings before logging or adding the payload to diagnostics.
 
