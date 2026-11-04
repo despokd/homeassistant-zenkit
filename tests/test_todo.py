@@ -333,7 +333,7 @@ RELATION_ELEMENTS = [
 
 def test_item_details():
     item = {
-        f"{SUBITEMS}_parents": ["parent-uuid"],
+        f"{SUBITEMS}_parents": ["root-uuid", "parent-uuid"],
         f"{SUBITEMS}_references": ["child-uuid"],
         f"{DEPENDENCIES}_references": ["other-uuid"],
         "hierarchy-uuid_value": "1.2",
@@ -351,7 +351,7 @@ def test_item_details():
     }
 
     assert _item_details(item, RELATION_ELEMENTS) == {
-        "parents": ["parent-uuid"],
+        "parent": "parent-uuid",
         "children": ["child-uuid"],
         "dependencies": ["other-uuid"],
         "hierarchy": "1.2",

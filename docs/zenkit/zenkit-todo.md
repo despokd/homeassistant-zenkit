@@ -60,20 +60,23 @@ Observed 2026-10-25 on a list with 1383 entries (14 pages): 42 pages fetched bac
 
 ## Sub-items, dependencies and checklists
 
-Observed 2026-11-05 read-only on a `project` list ("testproj") with a Subitems and a Dependencies element and on 15 `taskList`s. No entry had a sub-item or dependency set, so the meaning of the reference keys comes from `GET /api/v1/elementcategories` (public, `businessDataDefinition`) and is not verified with real relations.
+Observed 2026-11-05 on a `project` list ("testproj") with a Subitems and a Dependencies element, by setting and then clearing relations, and read-only on 15 `taskList`s. The keys are also listed in `GET /api/v1/elementcategories` (public, `businessDataDefinition`).
 
 Subentries (category 18, `resourceRole: "subtasks"`, `singleton: true`), per entry:
 
-| Key | Example | Meaning (assumed) |
+| Key | Example | Meaning |
 | --- | --- | --- |
-| `<uuid>_references` | `[]` | uuids of the sub-items (children) |
-| `<uuid>_references_sort` | `[]` | the referenced entries as objects |
-| `<uuid>_parents` | `[]` | uuids of the parent entries |
-| `<uuid>_path` | `"00000003"` | ltree path; a top-level entry has one segment |
-| `<uuid>_sortOrder` | `3` | position among siblings |
+| `<uuid>_references` | `["<child uuid>"]` | uuids of the direct sub-items (children) |
+| `<uuid>_references_sort` | `[{"uuid", "displayString", …}]` | the children as entry objects |
+| `<uuid>_parents` | `["<root uuid>", "<parent uuid>"]` | all ancestors from the root, the last is the direct parent |
+| `<uuid>_path` | `"00000001.00000001"` | ltree path, one segment per level |
+| `<uuid>_sortOrder` | `3` | position among siblings, `null` for a sub-item |
 | `<uuid>_connected` | `true` | element `businessData.connected` is `true` too |
 
-Dependencies (category 19, `resourceRole: "dependencies"`, `singleton: true`), per entry: `<uuid>_references` (uuids of the linked entries), `<uuid>_references_sort`, `<uuid>_tags` (`{}`) and `<uuid>_milestone` (`false`). The direction of a dependency is not documented.
+- Set sub-items on the parent: `PUT` `{"<uuid>_references": [childUuid]}`. Zenkit then sets the child's `_parents` and `_path`; `[]` clears it.
+- Changing the tree renumbers the top-level `_path` segments of other entries (their `_sortOrder` stays), so clearing relations again does not restore the previous path order.
+
+Dependencies (category 19, `resourceRole: "dependencies"`, `singleton: true`), per entry: `<uuid>_references` (uuids of the linked entries), `<uuid>_references_sort` (as entry objects), `<uuid>_tags` (`{}`) and `<uuid>_milestone` (`false`). A dependency is only stored on the entry it was written to, not mirrored on the referenced entry. Which side the Zenkit UI shows as the predecessor was not checked.
 
 Hierarchy (category 17) was on none of the lists. Its category definition has a single text value (`businessDataDefinition.value`, `sortKey: "value"`, filter key `level`), so the entry key is assumed to be `<uuid>_value`.
 
@@ -90,4 +93,4 @@ Checklists are not an element: every entry has a top-level `checklists` array (a
 ]
 ```
 
-Checklist items have no uuid. Writing relations or checklists is untested.
+Checklist items have no uuid. Writing checklists is untested.

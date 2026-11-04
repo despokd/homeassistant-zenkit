@@ -206,8 +206,9 @@ def _item_details(
     details: dict[str, Any] = {}
     subentries = subentries_element(elements) if elements else None
     if subentries is not None:
+        # Ancestors from the root, the last is the direct parent
         if parents := item.get(f"{subentries['uuid']}_parents"):
-            details["parents"] = parents
+            details["parent"] = parents[-1]
         if children := item.get(f"{subentries['uuid']}_references"):
             details["children"] = children
     dependencies = dependencies_element(elements) if elements else None
