@@ -37,7 +37,7 @@ Bring your [Zenkit](https://zenkit.com) lists into Home Assistant as to-do lists
 <details>
 <summary>Manual installation</summary>
 
-1. Download the latest zip from [GitHub Releases](https://github.com/despokd/homeassistant-zenkit/releases/latest).
+1. Download `Source code (zip)` of the latest [GitHub Release](https://github.com/despokd/homeassistant-zenkit/releases/latest).
 2. Copy the folder `zenkit` from `custom_components` to `<config>/custom_components/`.
 3. Restart Home Assistant.
 

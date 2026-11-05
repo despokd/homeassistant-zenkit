@@ -30,6 +30,8 @@ After changing code in `custom_components/zenkit/`, restart the local HA instanc
 
 Before each commit, check `README.md` and `docs/` against the change: search them for the features, entities, attributes and terms it touches, until every statement about the changed behavior (including limitations, intervals, entity ids and devices) matches the code. User-facing behavior lives in `README.md` and `docs/user/`, internals in `docs/technical/`.
 
+Commit messages and PR titles follow [Conventional Commits](https://www.conventionalcommits.org/) (`feat:`, `fix:`, `docs:`, …); they drive the automated version bump and release notes. Don't bump the version by hand. Details: [docs/technical/releases.md](docs/technical/releases.md).
+
 Tests: `python3 -m venv .venv && .venv/bin/pip install -r requirements_test.txt`, then `.venv/bin/python -m pytest`. Formatting is checked with `black`.
 
 ## TODOs
