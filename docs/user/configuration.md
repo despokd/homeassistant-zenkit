@@ -43,6 +43,8 @@ Items are completed by the list's status field. Lists without one (or without a 
 | `status` | Name of a status option, e.g. `In progress` |
 | `labels` | Names of tag options |
 | `assignees` | Display names or usernames of list members |
+| `checklist` | Items of a new checklist, unchecked. Any list can have checklists |
+| `checklist_name` | Name of that checklist, `Checklist` if not set |
 
 Names are matched as shown in Zenkit, ignoring case. The options must exist in the list already, new labels can't be created. A name that matches no option or member, or a field the list doesn't have, fails with a message listing what is available. Lists of type to-do have no tags field, projects do.
 
@@ -58,6 +60,8 @@ actions:
       status: In progress
       labels: [Important]
       assignees: [Jane Doe]
+      checklist: [Passport, Charger]
+      checklist_name: Packing list
     response_variable: created
 ```
 

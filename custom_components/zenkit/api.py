@@ -4,6 +4,7 @@ import requests  # type: ignore
 import asyncio
 import datetime
 import logging
+import uuid
 
 from requests.exceptions import RequestException  # type: ignore
 
@@ -128,6 +129,16 @@ def _entry_fields(
             _user_id(users or [], name) for name in kwargs["assignees"]
         ]
     return fields
+
+
+def _checklist(name: str, items: list[str]) -> dict:
+    """Get a new checklist with unchecked items, Zenkit requires its uuid."""
+    return {
+        "uuid": str(uuid.uuid4()),
+        "name": name,
+        "items": [{"text": text, "checked": False} for text in items],
+        "shouldCheckedItemsBeHidden": False,
+    }
 
 
 def _require_field(element: dict | None, field: str) -> dict:
@@ -358,14 +369,26 @@ class Zenkit:
 
         return response.json()
 
-    async def create_entry(self, list_short_id: str, entry_id: str, **kwargs) -> None:
-        """Add an entry with its fields to a list."""
+    async def create_entry(
+        self,
+        list_short_id: str,
+        entry_id: str,
+        checklist: dict | None = None,
+        **kwargs,
+    ) -> None:
+        """Add an entry with its fields to a list.
+
+        `checklist` is `{"name": ..., "items": [text, ...]}`, its items unchecked.
+        """
         # https://base.zenkit.com/docs/api/entries/post-api-v1-lists-listid-entries
         url = f"{API_URL}/lists/{list_short_id}/entries"
         data = {
             "uuid": entry_id,
             **await self._write_fields(list_short_id, **kwargs),
         }
+        if checklist is not None:
+            # Not an element, written with the entry, see docs/zenkit/zenkit-todo.md
+            data["checklists"] = [_checklist(checklist["name"], checklist["items"])]
         response = await asyncio.to_thread(
             requests.post, url, headers=self.headers, json=data
         )

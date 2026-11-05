@@ -241,6 +241,14 @@
         "assignees": {
           "name": "Assignees",
           "description": "Names or usernames of members of the list."
+        },
+        "checklist": {
+          "name": "Checklist",
+          "description": "Items of a new checklist on the entry, all unchecked."
+        },
+        "checklist_name": {
+          "name": "Checklist name",
+          "description": "Name of the checklist, Checklist if empty."
         }
       }
     }

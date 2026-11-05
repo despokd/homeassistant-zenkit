@@ -476,3 +476,26 @@ async def test_create_entry_due_time_without_zone_is_local(hass, entity):
     assert kwargs["due"] == datetime.datetime(
         2026, 11, 3, 17, 0, tzinfo=datetime.timezone.utc
     )
+
+
+@pytest.mark.parametrize(
+    ("name", "expected"),
+    [("Packing", "Packing"), (None, "Checklist"), ("", "Checklist")],
+)
+async def test_create_entry_with_checklist(entity, name, expected):
+    await entity.async_create_entry(
+        name="Trip", checklist=["Passport", "Charger"], checklist_name=name
+    )
+
+    _, _, kwargs = entity.coordinator.zk.create_entry.mock_calls[0]
+    assert kwargs == {
+        "name": "Trip",
+        "checklist": {"name": expected, "items": ["Passport", "Charger"]},
+    }
+
+
+async def test_create_entry_empty_checklist_is_not_sent(entity):
+    await entity.async_create_entry(name="Trip", checklist=[], checklist_name="X")
+
+    _, _, kwargs = entity.coordinator.zk.create_entry.mock_calls[0]
+    assert kwargs == {"name": "Trip"}

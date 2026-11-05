@@ -36,3 +36,12 @@ create_entry:
       selector:
         text:
           multiple: true
+    checklist:
+      example: "Passport"
+      selector:
+        text:
+          multiple: true
+    checklist_name:
+      example: "Packing list"
+      selector:
+        text:

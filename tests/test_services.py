@@ -27,11 +27,13 @@ def test_create_entry_schema():
             "due_date": "2026-11-03",
             "labels": "Important",
             "assignees": ["Jane Doe"],
+            "checklist": "Passport",
         }
     )
 
     assert data["due_date"] == datetime.date(2026, 11, 3)
     assert data["labels"] == ["Important"]
+    assert data["checklist"] == ["Passport"]
 
 
 @pytest.mark.parametrize(
@@ -39,6 +41,7 @@ def test_create_entry_schema():
     [
         {"entity_id": "todo.inbox"},
         {"entity_id": "todo.inbox", "name": ""},
+        {"entity_id": "todo.inbox", "name": "Trip", "checklist": ["Passport", ""]},
         {
             "entity_id": "todo.inbox",
             "name": "Buy milk",

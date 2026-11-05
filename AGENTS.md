@@ -10,7 +10,7 @@ Key facts:
 
 - `api.py` uses sync `requests` wrapped in `asyncio.to_thread`, not aiohttp.
 - Zenkit has no fixed todo schema; fields are user-defined and keyed `<elementUuid>_<type>`. Summary/status/description/due are derived heuristically in `todo.py`.
-- Writes support `name`, `completed`, `description`, `due`, `status`, `labels` and `assignees` (option and member names, see `_entry_fields` in `api.py`); other fields raise `NotImplementedError`. The todo entity only writes the first four, `zenkit.create_entry` (`services.py`) the rest.
+- Writes support `name`, `completed`, `description`, `due`, `status`, `labels` and `assignees` (option and member names, see `_entry_fields` in `api.py`); other fields raise `NotImplementedError`. The todo entity only writes the first four, `zenkit.create_entry` (`services.py`) the rest, and a `checklist` on create only.
 - After any write, entities call `coordinator.async_refresh_list(shortId)`. A list that fails to load only makes its own entity unavailable (`coordinator.failed_lists`).
 - Zenkit API quirks and undocumented behavior go in [docs/zenkit/](docs/zenkit/README.md).
 - docs have a README.md in each directory as starting point

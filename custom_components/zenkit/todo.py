@@ -36,6 +36,8 @@ _LOGGER = logging.getLogger(__name__)
 
 # Sub-items, dependencies and checklists per item uid, see _item_details
 ITEM_DETAILS = "item_details"
+# Name of a checklist created by zenkit.create_entry, as Zenkit names new ones
+DEFAULT_CHECKLIST_NAME = "Checklist"
 
 
 async def async_setup_entry(
@@ -376,6 +378,8 @@ class ZenkitTodoListEntity(
         status: str | None = None,
         labels: list[str] | None = None,
         assignees: list[str] | None = None,
+        checklist: list[str] | None = None,
+        checklist_name: str | None = None,
     ) -> ServiceResponse:
         """Create an entry with more fields than a To-do item has (zenkit.create_entry)."""
         uid = str(uuid.uuid4())
@@ -394,6 +398,11 @@ class ZenkitTodoListEntity(
             fields["labels"] = labels
         if assignees:
             fields["assignees"] = assignees
+        if checklist:
+            fields["checklist"] = {
+                "name": checklist_name or DEFAULT_CHECKLIST_NAME,
+                "items": checklist,
+            }
         await self.coordinator.zk.create_entry(self.list_short_id, uid, **fields)
         await self.coordinator.async_refresh_list(self.list_short_id)
         return {"uid": uid}

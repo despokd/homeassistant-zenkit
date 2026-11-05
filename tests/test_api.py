@@ -578,3 +578,30 @@ async def test_update_status_by_name(full_list):
     await Zenkit("key").update_entry("list", "entry-uuid", status="To do")
 
     assert _put_body(full_list) == {f"{STAGE}_categories": [1]}
+
+
+async def test_create_entry_with_checklist(requests_mock):
+    await Zenkit("key").create_entry(
+        "list",
+        "entry-uuid",
+        checklist={"name": "Packing", "items": ["Passport", "Charger"]},
+        name="Trip",
+    )
+
+    body = _post_body(requests_mock)
+    (checklist,) = body.pop("checklists")
+    assert body == {"uuid": "entry-uuid", f"{TITLE}_text": "Trip"}
+    assert checklist.pop("uuid")
+    assert checklist == {
+        "name": "Packing",
+        "items": [
+            {"text": "Passport", "checked": False},
+            {"text": "Charger", "checked": False},
+        ],
+        "shouldCheckedItemsBeHidden": False,
+    }
+
+
+async def test_update_checklist_is_not_supported(requests_mock):
+    with pytest.raises(NotImplementedError):
+        await Zenkit("key").update_entry("list", "entry-uuid", checklist={})

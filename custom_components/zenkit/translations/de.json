@@ -241,6 +241,14 @@
                 "assignees": {
                     "name": "Zugewiesene",
                     "description": "Namen oder Benutzernamen von Mitgliedern der Liste."
+                },
+                "checklist": {
+                    "name": "Checkliste",
+                    "description": "Punkte einer neuen Checkliste am Eintrag, alle nicht abgehakt."
+                },
+                "checklist_name": {
+                    "name": "Name der Checkliste",
+                    "description": "Name der Checkliste, Checklist wenn leer."
                 }
             }
         }

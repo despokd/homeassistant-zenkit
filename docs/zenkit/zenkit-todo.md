@@ -50,6 +50,11 @@ Labels and assignees, verified against a `taskList` and a `project` (2026-11-05)
 - Assignees (`assignments`, category 14): `{"<uuid>_persons": [userId, ...]}` with numeric user ids. Zenkit returns `<uuid>_persons_sort` with `id`, `displayname`, `username`, `initials` and the image fields.
 - The members of a list come from `GET /lists/{listAllId}/users` (not in the docs): users with `id`, `displayname`, `fullname`, `username` and `roleId` (e.g. `listOwner`), but no email.
 
+Checklists, verified against a `taskList` (2026-11-05):
+
+- `POST /lists/{listAllId}/entries` accepts `"checklists": [{"uuid", "name", "items": [{"text", "checked"}], "shouldCheckedItemsBeHidden"}]` next to the fields, so a new entry gets its checklists in one request. Each checklist needs a `uuid` (`400` `C21` without), items are only `text` and `checked`.
+- `PUT /lists/{listAllId}/entries/{entryAllId}/checklists` takes `{"checklists": [...]}` (a bare array is rejected with `400`) and replaces all checklists of the entry.
+
 Text and date fields, verified against a `taskList` (2026-10-25):
 
 - Text (`notes`): `{"<uuid>_text": "..."}`. Stored as plain text (`<uuid>_textType: "plain"`), line breaks and Markdown characters are kept as is. Zenkit also returns `<uuid>_searchText`.

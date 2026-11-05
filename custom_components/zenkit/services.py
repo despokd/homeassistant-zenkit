@@ -19,6 +19,8 @@ ATTR_DUE_DATETIME = "due_datetime"
 ATTR_STATUS = "status"
 ATTR_LABELS = "labels"
 ATTR_ASSIGNEES = "assignees"
+ATTR_CHECKLIST = "checklist"
+ATTR_CHECKLIST_NAME = "checklist_name"
 
 CREATE_ENTRY_SCHEMA = vol.All(
     cv.make_entity_service_schema(
@@ -30,6 +32,10 @@ CREATE_ENTRY_SCHEMA = vol.All(
             vol.Optional(ATTR_STATUS): cv.string,
             vol.Optional(ATTR_LABELS): vol.All(cv.ensure_list, [cv.string]),
             vol.Optional(ATTR_ASSIGNEES): vol.All(cv.ensure_list, [cv.string]),
+            vol.Optional(ATTR_CHECKLIST): vol.All(
+                cv.ensure_list, [vol.All(cv.string, vol.Length(min=1))]
+            ),
+            vol.Optional(ATTR_CHECKLIST_NAME): cv.string,
         }
     ),
     cv.has_at_most_one_key(ATTR_DUE_DATE, ATTR_DUE_DATETIME),
