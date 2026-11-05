@@ -156,7 +156,8 @@ def _update_list_devices(
             )
     for zenkit_list in coordinator.lists:
         info = coordinator.list_device_info(zenkit_list)
-        device = registry.async_get_device(identifiers=info["identifiers"])
+        (identifier,) = info["identifiers"]
+        device = registry.async_get_device_by_identifier(identifier, entry.entry_id)
         if device is not None and (
             device.name != info["name"] or device.model != info["model"]
         ):
