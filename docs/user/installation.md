@@ -2,12 +2,11 @@
 
 ## 1. Using HACS (recommended way)
 
-This integration is a not yet an official HACS Integration.
+This integration is in the HACS default repository list.
 
 1. Open HACS
-2. Open options with the three dots at the upper right
-3. Add this repo `https://github.com/despokd/homeassistant-zenkit` as a custom repository with type `Integration`
-4. then install the "Zenkit" integration or use the link below.
+2. Search for "Zenkit" and install it, or use the link below.
+3. Restart Home Assistant.
 
 [![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=despokd&repository=homeassistant-zenkit&category=integration)
 

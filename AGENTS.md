@@ -16,6 +16,8 @@ Key facts:
 - docs have a README.md in each directory as starting point
 - Every entity attribute needs a translated name (`entity.<platform>.<translation_key>.state_attributes.<attribute>.name`) in `strings.json`, `translations/en.json` and `translations/de.json`. The entity needs a `translation_key` for this. `tests/test_translations.py` checks it.
 
+- `README.md` is the page shown in HACS and the HA marketplace. Use absolute `raw.githubusercontent.com` URLs for images there (relative paths and `brands.home-assistant.io` don't work). When user-visible features change, update its feature and entity lists and `docs/user/`.
+
 ## Resources
 
 - [Zenkit User Docs](https://help.zenkit.com/en/support/home)
