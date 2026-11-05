@@ -27,6 +27,10 @@ How the list looks in Zenkit, each `null` if unset:
 
 Example template: `{{ state_attr('todo.groceries', 'folder_path') | join(' / ') }}`. Renamed or moved lists and folders are picked up within an hour, or right away with the [refresh button](#refresh-button).
 
+### Completed items
+
+Completing an item sets the list's done status in Zenkit, and the item disappears from Home Assistant. Completed items aren't loaded at all, so lists with many done items poll as fast as short ones. To reopen an item, change its status in Zenkit; it shows up again with the next poll.
+
 ### Lists without status
 
 Items are completed by the list's status field. Lists without one (or without a done status) show their items in a separate section with an indeterminate checkbox (neither checked nor unchecked). Clicking it changes nothing in Zenkit, but the card shows it ticked until the page is reloaded. Completing an item through an action shows an error. The entity state counts only open items, so it is `0` for these lists.
@@ -156,4 +160,4 @@ Lists without a due date field only get the open count. The counts update with e
 
 ### Diagnostics
 
-Settings > Devices & services > Zenkit > ⋮ > Download diagnostics. The file has your list ids, field roles and errors, but not your API key, emails, names or list names.
+Settings > Devices & services > Zenkit > ⋮ > Download diagnostics. The file has your list ids, field roles, the number of loaded (open) items per list and errors, but not your API key, emails, names or list names.
