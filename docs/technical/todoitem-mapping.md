@@ -18,7 +18,7 @@ Zenkit lists have user-defined fields, keyed `<elementUuid>_<type>`. Fields are 
 - An empty description (`""`) is shown as none.
 - Until the elements of a list are fetched (or if the fetch failed), reads use the old heuristics: status by the `#3ba744` color in any `*_categories_sort`, description by the first `*_text` that differs from `displayString`, due by the first set `*_date`.
 
-Completed items are filtered out and not shown in HA.
+Completed items are not shown in HA. Once a list's elements are known, Zenkit leaves them out of the response already ([Filtering entries](../zenkit/zenkit-todo.md#filtering-entries)); until then, and as a safety net, the entities, sensors and calendar skip them too.
 
 ## Lists without a status field
 

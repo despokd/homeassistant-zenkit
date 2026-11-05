@@ -110,6 +110,7 @@ actions:
 
 - Data is polled every 60 seconds, the lists themselves every hour. Press the refresh button for an immediate update.
 - Name, completed state, description and due date of items can be changed from Home Assistant. Status, labels, assignees and checklists can only be set when creating an item with `zenkit.create_entry`.
+- Completed items aren't shown in Home Assistant or loaded from Zenkit. Reopen them in Zenkit.
 - Lists without a status field show their items in a separate section with an indeterminate checkbox, and can't be completed.
 
 ## Documentation and help
