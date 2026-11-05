@@ -1,5 +1,24 @@
 # Changelog
 
+## [1.2.0](https://github.com/despokd/homeassistant-zenkit/compare/v1.1.0...v1.2.0) (2026-11-05)
+
+
+### Features
+
+* add zenkit.create_entry action with status, labels, assignees and checklist ([#38](https://github.com/despokd/homeassistant-zenkit/issues/38)) ([#60](https://github.com/despokd/homeassistant-zenkit/issues/60)) ([dfe811e](https://github.com/despokd/homeassistant-zenkit/commit/dfe811ed3c0b90a87ee16a37b6d5d3cc8e6887b7))
+* filter completed entries on the Zenkit side ([#62](https://github.com/despokd/homeassistant-zenkit/issues/62)) ([b7703c1](https://github.com/despokd/homeassistant-zenkit/commit/b7703c1a4f194ccf7e189d96ac3383e9c2460abf))
+
+
+### Bug Fixes
+
+* replace deprecated device_registry.async_get_device ([#59](https://github.com/despokd/homeassistant-zenkit/issues/59)) ([a5c75d6](https://github.com/despokd/homeassistant-zenkit/commit/a5c75d688e91779a9cb94cb1bb934fa61406362c))
+* scope list entity unique ids to the config entry ([#58](https://github.com/despokd/homeassistant-zenkit/issues/58)) ([e759d7a](https://github.com/despokd/homeassistant-zenkit/commit/e759d7a5a7e6245ca0f57228654aa4f4bf92b7a3))
+
+
+### Performance Improvements
+
+* reuse HTTP connections via Home Assistant's aiohttp session ([#35](https://github.com/despokd/homeassistant-zenkit/issues/35)) ([#65](https://github.com/despokd/homeassistant-zenkit/issues/65)) ([98e27fd](https://github.com/despokd/homeassistant-zenkit/commit/98e27fd24f1f55cb684e5bd8345547d3d51dae67))
+
 ## [1.1.0](https://github.com/despokd/homeassistant-zenkit/compare/v1.0.1...v1.1.0) (2026-11-05)
 
 
