@@ -60,6 +60,7 @@ def now(monkeypatch):
 
 def _coordinator(entries=ENTRIES, elements=ELEMENTS):
     coordinator = MagicMock(
+        entry_id="entry",
         data={"list": list(entries)},
         failed_lists=set(),
         last_update_success=True,
@@ -120,7 +121,7 @@ def test_list_without_data_is_unavailable():
 
 def test_ids_and_name():
     sensor = _sensor("overdue_entries")
-    assert sensor.unique_id == "list-uuid_overdue_entries"
+    assert sensor.unique_id == "entry_list-uuid_overdue_entries"
     assert sensor.entity_id == "sensor.zenkit_groceries_overdue_entries"
     assert sensor.translation_key == "overdue_entries"
     assert sensor.device_info is sensor.coordinator.list_device_info.return_value

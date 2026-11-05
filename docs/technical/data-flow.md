@@ -11,9 +11,9 @@ HA config entry (API key)
               ├─> organization device (service, <entry_id>_organization_<organization id>, via account)
               │     └─> ZenkitSensor × 4  (organization_*, device_fn)
               └─> list device × N  (device, <entry_id>_list_<list uuid>, via account)
-                    ├─> ZenkitTodoListEntity  (unique_id = list uuid)
-                    ├─> ZenkitCalendarEntity  (lists with a due date field)
-                    └─> ZenkitListSensor × 1–3  (see sensor.LIST_SENSORS)
+                    ├─> ZenkitTodoListEntity  (unique_id = <entry_id>_<list uuid>)
+                    ├─> ZenkitCalendarEntity  (<entry_id>_<list uuid>, lists with a due date field)
+                    └─> ZenkitListSensor × 1–3  (<entry_id>_<list uuid>_<key>, see sensor.LIST_SENSORS)
 ```
 
 - **Setup**: `async_setup_entry` calls `login()` (`/auth/currentuser`) and keeps the returned user on the coordinator for the account device and diagnostics. Network and server errors (`CannotConnectException`) raise `ConfigEntryNotReady`; a bad key (HTTP 401) returns `False`. Older entries get the user id as `unique_id`, unless another entry already has it. Then the account and organization devices are registered before the platforms, so list devices can link to the account device by `via_device_id`, see [Devices](#devices).

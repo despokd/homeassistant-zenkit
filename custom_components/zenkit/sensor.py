@@ -481,7 +481,9 @@ class ZenkitListSensor(CoordinatorEntity[ZenkitDataUpdateCoordinator], SensorEnt
         super().__init__(coordinator=coordinator)
         self.entity_description = description
         self.list_short_id = list["shortId"]
-        self._attr_unique_id = f"{list['uuid']}_{description.key}"
+        self._attr_unique_id = (
+            f"{coordinator.entry_id}_{list['uuid']}_{description.key}"
+        )
         self._attr_device_info = coordinator.list_device_info(list)
         # Suggested id, else it is derived from the name in the HA language
         self.entity_id = f"sensor.{DOMAIN}_{slugify(list['name'])}_{description.key}"
