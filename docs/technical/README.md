@@ -5,3 +5,4 @@
 - [Entry → TodoItem mapping](todoitem-mapping.md)
 - [Config entry versions](config-entry-versions.md)
 - [Releases](releases.md)
+- [Decisions](decisions/README.md)

@@ -19,7 +19,7 @@ custom_components/zenkit/
 ├── diagnostics.py    # Config entry diagnostics: redacted user, lists with element roles, failures
 ├── const.py          # DOMAIN, ZENKIT_URL, API_URL, UPDATE_INTERVAL, USER_UPDATE_INTERVAL, ENTRIES_LIMIT, RETRY_DELAYS, DUE_DATE_FORMAT, DUE_DATETIME_FORMAT
 ├── exceptions.py     # ZenkitException > CannotConnectException, CannotLoginException, UpdateFailedException, InvalidValueException (a ServiceValidationError with a translated message)
-├── manifest.json     # HA manifest (integration_type `hub`, cloud_polling, requires `requests`)
+├── manifest.json     # HA manifest (integration_type `hub`, cloud_polling, no requirements: `requests` ships with HA)
 ├── services.yaml     # Fields of the actions
 ├── icons.json        # Action icons
 ├── strings.json      # Config flow, entity, action and error strings
