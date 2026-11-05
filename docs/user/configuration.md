@@ -59,13 +59,13 @@ Data is polled every 60 seconds. Press the __Refresh Zenkit data__ button (`butt
 
 The integration groups its entities into devices:
 
-| Device | Name | Entities |
-| --- | --- | --- |
-| Account | Your Zenkit display name | Account sensors, unread notifications, profile image, refresh button |
-| Organization | Organization name | Organization, plan, members and quotas sensors |
-| List, one per Zenkit list | List name | The todo list, its calendar and its count sensors |
+| Device | Name | Model | Entities |
+| --- | --- | --- | --- |
+| Account (service) | Your Zenkit display name | Account | Account sensors, unread notifications, profile image, refresh button |
+| Organization (service) | Organization name | Organization | Organization, plan, members and quotas sensors |
+| One device per Zenkit list | List name | Its Zenkit type: To-do list, Project or Database | The todo list, its calendar and its count sensors |
 
-List and organization devices are linked to the account device ("Connected via"). The todo list and calendar are named after their list device, the count sensors are e.g. "Groceries Open entries".
+The integration page shows the account and organization under services and the lists under devices. List and organization devices are linked to the account device ("Connected via"). Models are in the language of Home Assistant at setup. The todo list and calendar are named after their list device, the count sensors are e.g. "Groceries Open entries".
 
 Installs from before the grouping keep their device, with its area and name, as the account device. Entity ids stay the same. Devices of lists deleted in Zenkit can be deleted on their device page after a reload of the integration.
 

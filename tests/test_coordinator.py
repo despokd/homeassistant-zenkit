@@ -137,7 +137,18 @@ def test_device_info_is_the_account(coordinator):
 
     assert info["identifiers"] == {(DOMAIN, "entry_account_906842")}
     assert info["name"] == "User Name"
+    assert info["model"] == "account"
     assert info["entry_type"] == DeviceEntryType.SERVICE
+
+
+def test_device_models_are_translated(coordinator):
+    coordinator.models = {"account": "Konto", "project": "Projekt", "list": "Liste"}
+    project = {"uuid": "u", "shortId": "a", "name": "A", "resourceType": "project"}
+    unknown = {"uuid": "u", "shortId": "a", "name": "A", "resourceType": "other"}
+
+    assert coordinator.device_info["model"] == "Konto"
+    assert coordinator.list_device_info(project)["model"] == "Projekt"
+    assert coordinator.list_device_info(unknown)["model"] == "Liste"
 
 
 def test_organization_device_info(coordinator):
@@ -170,6 +181,9 @@ def test_list_device_info(coordinator):
 
     assert info["identifiers"] == {(DOMAIN, "entry_list_u")}
     assert info["name"] == "A"
+    assert info["model"] == "list"
+    # A device, the account and organization are services
+    assert "entry_type" not in info
     assert info["via_device_id"] == "account-device"
 
 

@@ -9,6 +9,7 @@ from homeassistant.const import CONF_TOKEN, Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryNotReady
 from homeassistant.helpers import device_registry as dr
+from homeassistant.helpers.translation import async_get_translations
 
 from .const import DOMAIN
 from .api import Zenkit
@@ -46,6 +47,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     _set_unique_id(hass, entry, str(user["id"]))
 
     coordinator = ZenkitDataUpdateCoordinator(hass, zk, user, entry.entry_id)
+    coordinator.models = await _async_device_models(hass)
     await coordinator.async_config_entry_first_refresh()
     _register_devices(hass, entry, coordinator)
 
@@ -69,6 +71,19 @@ def _set_unique_id(hass: HomeAssistant, entry: ConfigEntry, user_id: str) -> Non
         _LOGGER.warning("Zenkit account %s is configured more than once", user_id)
         return
     hass.config_entries.async_update_entry(entry, unique_id=user_id)
+
+
+async def _async_device_models(hass: HomeAssistant) -> dict[str, str]:
+    """Device models in the language of HA, HA translates only device names."""
+    translations = await async_get_translations(
+        hass, hass.config.language, "device", {DOMAIN}
+    )
+    prefix = f"component.{DOMAIN}.device."
+    return {
+        key.removeprefix(prefix).removesuffix(".name"): name
+        for key, name in translations.items()
+        if key.startswith(prefix) and key.endswith(".name")
+    }
 
 
 def _register_devices(

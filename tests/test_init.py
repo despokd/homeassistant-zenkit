@@ -6,6 +6,7 @@ from homeassistant.helpers import device_registry as dr
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.zenkit import (
+    _async_device_models,
     _register_devices,
     _set_unique_id,
     async_remove_config_entry_device,
@@ -144,3 +145,12 @@ async def test_only_stale_devices_can_be_removed(hass):
             hass, entry, device(identifier)
         )
     assert await async_remove_config_entry_device(hass, entry, device("list_gone"))
+
+
+async def test_device_models_in_ha_language(hass, enable_custom_integrations):
+    hass.config.language = "de"
+
+    models = await _async_device_models(hass)
+
+    assert models["account"] == "Konto"
+    assert models["task_list"] == "Aufgabenliste"

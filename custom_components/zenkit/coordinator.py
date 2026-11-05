@@ -14,6 +14,8 @@ from .const import DOMAIN, UPDATE_INTERVAL, USER_UPDATE_INTERVAL, ZENKIT_URL
 from .api import Zenkit
 
 _LOGGER = logging.getLogger(__name__)
+# Device model translation keys by list resourceType, others are "list"
+LIST_MODELS = {"taskList": "task_list", "project": "project", "database": "database"}
 
 
 class ZenkitDataUpdateCoordinator(DataUpdateCoordinator[dict]):
@@ -39,6 +41,8 @@ class ZenkitDataUpdateCoordinator(DataUpdateCoordinator[dict]):
         self.entry_id = entry_id
         # Registered at setup, before the devices linked to it
         self.account_device_id: str | None = None
+        # Translated device models by translation key, loaded at setup
+        self.models: dict[str, str] = {}
         self._lists: dict = None
         # Short ids of lists whose last fetch failed, their entities are unavailable
         self.failed_lists: set[str] = set()
@@ -135,7 +139,7 @@ class ZenkitDataUpdateCoordinator(DataUpdateCoordinator[dict]):
             identifiers={self.account_identifier},
             name=self.user.get("displayname") or self.user["username"],
             manufacturer="Zenkit",
-            model="Zenkit To Do",
+            model=self._model("account"),
             entry_type=DeviceEntryType.SERVICE,
             configuration_url=ZENKIT_URL,
         )
@@ -153,7 +157,7 @@ class ZenkitDataUpdateCoordinator(DataUpdateCoordinator[dict]):
             name=name or None,
             translation_key=None if name else "organization",
             manufacturer="Zenkit",
-            model="Organization",
+            model=self._model("organization"),
             entry_type=DeviceEntryType.SERVICE,
             configuration_url=ZENKIT_URL,
             **self._via_account(),
@@ -165,11 +169,14 @@ class ZenkitDataUpdateCoordinator(DataUpdateCoordinator[dict]):
             identifiers={(DOMAIN, f"{self.entry_id}_list_{zenkit_list['uuid']}")},
             name=zenkit_list["name"],
             manufacturer="Zenkit",
-            model="List",
-            entry_type=DeviceEntryType.SERVICE,
+            model=self._model(LIST_MODELS.get(zenkit_list.get("resourceType"), "list")),
             configuration_url=ZENKIT_URL,
             **self._via_account(),
         )
+
+    def _model(self, key: str) -> str:
+        """The translated device model, the key before translations are loaded."""
+        return self.models.get(key, key)
 
     def _via_account(self) -> DeviceInfo:
         """Link a device to the account device, once it is registered."""

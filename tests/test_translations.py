@@ -7,6 +7,7 @@ from unittest.mock import MagicMock
 import pytest
 
 from custom_components.zenkit.api import _folder
+from custom_components.zenkit.coordinator import LIST_MODELS
 from custom_components.zenkit.sensor import SENSORS
 from custom_components.zenkit.todo import ITEM_DETAILS, _list_attributes
 
@@ -38,3 +39,11 @@ def test_attributes_have_translations(file):
         translated = entity[platform][key].get("state_attributes", {})
         missing = attributes - {k for k, v in translated.items() if v.get("name")}
         assert not missing, f"{file}: {platform}.{key} lacks {sorted(missing)}"
+
+
+@pytest.mark.parametrize("file", FILES)
+def test_device_models_have_translations(file):
+    device = json.loads((COMPONENT / file).read_text())["device"]
+    keys = {"account", "organization", "list", *LIST_MODELS.values()}
+    missing = {key for key in keys if not device.get(key, {}).get("name")}
+    assert not missing, f"{file}: device lacks {sorted(missing)}"

@@ -18,8 +18,23 @@
         }
     },
     "device": {
+        "account": {
+            "name": "Konto"
+        },
         "organization": {
             "name": "Organisation"
+        },
+        "list": {
+            "name": "Liste"
+        },
+        "task_list": {
+            "name": "Aufgabenliste"
+        },
+        "project": {
+            "name": "Projekt"
+        },
+        "database": {
+            "name": "Datenbank"
         }
     },
     "entity": {
