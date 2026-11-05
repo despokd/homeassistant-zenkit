@@ -17,6 +17,20 @@
             "already_configured": "Account is already configured"
         }
     },
+    "options": {
+        "step": {
+            "init": {
+                "title": "Options",
+                "description": "Assist sends sentences like \"add milk to my shopping list\" to the Shopping List integration, even when it is not set up. Choose a Zenkit list to get these sentences instead.",
+                "data": {
+                    "shopping_list": "Shopping list for Assist"
+                },
+                "data_description": {
+                    "shopping_list": "Leave empty to keep Home Assistant's default behavior."
+                }
+            }
+        }
+    },
     "device": {
         "account": {
             "name": "Account"

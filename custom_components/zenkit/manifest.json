@@ -1,6 +1,9 @@
 {
   "domain": "zenkit",
   "name": "Zenkit",
+  "after_dependencies": [
+    "conversation"
+  ],
   "codeowners": [
     "@despokd"
   ],

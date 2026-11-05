@@ -24,6 +24,7 @@ Bring your [Zenkit](https://zenkit.com) lists into Home Assistant as to-do lists
 - **Account sensors**: unread notifications, number of lists, profile and organization data
 - Added, removed and renamed lists are picked up without a reload
 - A **refresh button** to update all lists immediately
+- **Assist shopping list**: "add milk to my shopping list" goes to a Zenkit list of your choice
 - English and German translations
 
 ## Installation
