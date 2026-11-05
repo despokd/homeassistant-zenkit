@@ -13,7 +13,7 @@ from homeassistant.components.todo import (
     TodoListEntityFeature,
 )
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant, callback
+from homeassistant.core import HomeAssistant, ServiceResponse, callback
 from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
@@ -36,6 +36,8 @@ _LOGGER = logging.getLogger(__name__)
 
 # Sub-items, dependencies and checklists per item uid, see _item_details
 ITEM_DETAILS = "item_details"
+# Name of a checklist created by zenkit.create_entry, as Zenkit names new ones
+DEFAULT_CHECKLIST_NAME = "Checklist"
 
 
 async def async_setup_entry(
@@ -366,6 +368,44 @@ class ZenkitTodoListEntity(
             fields["due"] = item.due
         await self.coordinator.zk.create_entry(self.list_short_id, uid, **fields)
         await self.coordinator.async_refresh_list(self.list_short_id)
+
+    async def async_create_entry(
+        self,
+        name: str,
+        description: str | None = None,
+        due_date: datetime.date | None = None,
+        due_datetime: datetime.datetime | None = None,
+        status: str | None = None,
+        labels: list[str] | None = None,
+        assignees: list[str] | None = None,
+        checklist: list[str] | None = None,
+        checklist_name: str | None = None,
+    ) -> ServiceResponse:
+        """Create an entry with more fields than a To-do item has (zenkit.create_entry)."""
+        uid = str(uuid.uuid4())
+        fields: dict[str, Any] = {"name": name}
+        # Only send what is set, lists may lack these fields
+        if description:
+            fields["description"] = description
+        if due_datetime is not None:
+            # Without a time zone, the time is in the time zone of HA
+            fields["due"] = dt_util.as_local(due_datetime)
+        elif due_date is not None:
+            fields["due"] = due_date
+        if status:
+            fields["status"] = status
+        if labels:
+            fields["labels"] = labels
+        if assignees:
+            fields["assignees"] = assignees
+        if checklist:
+            fields["checklist"] = {
+                "name": checklist_name or DEFAULT_CHECKLIST_NAME,
+                "items": checklist,
+            }
+        await self.coordinator.zk.create_entry(self.list_short_id, uid, **fields)
+        await self.coordinator.async_refresh_list(self.list_short_id)
+        return {"uid": uid}
 
     async def async_update_todo_item(self, item: TodoItem) -> None:
         """Update a To-do item."""

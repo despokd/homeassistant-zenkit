@@ -198,6 +198,59 @@
   "exceptions": {
     "no_status_field": {
       "message": "{list} has no status field, so its items can't be completed"
+    },
+    "missing_field": {
+      "message": "The list has no {field} field"
+    },
+    "unknown_option": {
+      "message": "{field} has no option \"{value}\", available: {options}"
+    },
+    "unknown_user": {
+      "message": "\"{value}\" is no member of the list, members: {users}"
+    }
+  },
+  "services": {
+    "create_entry": {
+      "name": "Create entry",
+      "description": "Creates an entry in a Zenkit list, with fields a to-do item doesn't have.",
+      "fields": {
+        "name": {
+          "name": "Name",
+          "description": "The title of the entry."
+        },
+        "description": {
+          "name": "Description",
+          "description": "Text for the notes field of the list."
+        },
+        "due_date": {
+          "name": "Due date",
+          "description": "The date the entry is due."
+        },
+        "due_datetime": {
+          "name": "Due date and time",
+          "description": "The date and time the entry is due."
+        },
+        "status": {
+          "name": "Status",
+          "description": "Name of a status option of the list, as shown in Zenkit."
+        },
+        "labels": {
+          "name": "Labels",
+          "description": "Names of tag options of the list, as shown in Zenkit."
+        },
+        "assignees": {
+          "name": "Assignees",
+          "description": "Names or usernames of members of the list."
+        },
+        "checklist": {
+          "name": "Checklist",
+          "description": "Items of a new checklist on the entry, all unchecked."
+        },
+        "checklist_name": {
+          "name": "Checklist name",
+          "description": "Name of the checklist, Checklist if empty."
+        }
+      }
     }
   }
 }

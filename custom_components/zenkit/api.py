@@ -4,6 +4,7 @@ import requests  # type: ignore
 import asyncio
 import datetime
 import logging
+import uuid
 
 from requests.exceptions import RequestException  # type: ignore
 
@@ -15,8 +16,12 @@ from .const import (
     RETRY_DELAYS,
 )
 from .elements import (
+    assignees_element,
     due_element,
+    labels_element,
     notes_element,
+    option_by_name,
+    option_names,
     stage_element,
     status_option,
     title_element,
@@ -24,12 +29,21 @@ from .elements import (
 from .exceptions import (
     CannotConnectException,
     CannotLoginException,
+    InvalidValueException,
     UpdateFailedException,
 )
 
 _LOGGER = logging.getLogger(__name__)
 
-SUPPORTED_FIELDS = {"name", "completed", "description", "due"}
+SUPPORTED_FIELDS = {
+    "name",
+    "completed",
+    "description",
+    "due",
+    "status",
+    "labels",
+    "assignees",
+}
 
 
 def _log_error(response, message: str, *args) -> None:
@@ -55,8 +69,16 @@ def _is_retryable(response) -> bool:
     return response.status_code == 429 or response.status_code >= 500
 
 
-def _entry_fields(elements: list[dict], list_short_id: str, **kwargs) -> dict:
-    """Get the entry fields to write the given values."""
+def _entry_fields(
+    elements: list[dict],
+    list_short_id: str,
+    users: list[dict] | None = None,
+    **kwargs,
+) -> dict:
+    """Get the entry fields to write the given values.
+
+    `users` are the members of the list, needed to write assignees.
+    """
     unsupported = set(kwargs) - SUPPORTED_FIELDS
     if unsupported:
         raise NotImplementedError(
@@ -93,7 +115,66 @@ def _entry_fields(elements: list[dict], list_short_id: str, **kwargs) -> dict:
             )
         # Only `_categories` is writable, `_categories_sort` is ignored by Zenkit
         fields[f"{stage['uuid']}_categories"] = [option["id"]] if option else []
+    if "status" in kwargs:
+        stage = _require_field(stage_element(elements), "status")
+        fields[f"{stage['uuid']}_categories"] = [_option_id(stage, kwargs["status"])]
+    if "labels" in kwargs:
+        labels = _require_field(labels_element(elements), "labels")
+        fields[f"{labels['uuid']}_categories"] = [
+            _option_id(labels, name) for name in kwargs["labels"]
+        ]
+    if "assignees" in kwargs:
+        assignees = _require_field(assignees_element(elements), "assignees")
+        fields[f"{assignees['uuid']}_persons"] = [
+            _user_id(users or [], name) for name in kwargs["assignees"]
+        ]
     return fields
+
+
+def _checklist(name: str, items: list[str]) -> dict:
+    """Get a new checklist with unchecked items, Zenkit requires its uuid."""
+    return {
+        "uuid": str(uuid.uuid4()),
+        "name": name,
+        "items": [{"text": text, "checked": False} for text in items],
+        "shouldCheckedItemsBeHidden": False,
+    }
+
+
+def _require_field(element: dict | None, field: str) -> dict:
+    """Fail with a message for the user if a list lacks a field."""
+    if element is None:
+        raise InvalidValueException("missing_field", field=field)
+    return element
+
+
+def _option_id(element: dict, name: str) -> int:
+    """Get the id of an option of a categories element by its name."""
+    option = option_by_name(element, name)
+    if option is None:
+        raise InvalidValueException(
+            "unknown_option",
+            field=element.get("name") or "",
+            value=name,
+            options=", ".join(option_names(element)) or "-",
+        )
+    return option["id"]
+
+
+def _user_id(users: list[dict], name: str) -> int:
+    """Get the id of a list member by their display name, username or id."""
+    wanted = name.strip().casefold()
+    for user in users:
+        names = (user.get("displayname"), user.get("fullname"), user.get("username"))
+        if wanted == str(user.get("id")) or wanted in (
+            (n or "").strip().casefold() for n in names
+        ):
+            return user["id"]
+    raise InvalidValueException(
+        "unknown_user",
+        value=name,
+        users=", ".join(user.get("displayname") or "" for user in users) or "-",
+    )
 
 
 def _due_fields(uuid: str, due: datetime.date | None) -> dict:
@@ -288,15 +369,26 @@ class Zenkit:
 
         return response.json()
 
-    async def create_entry(self, list_short_id: str, entry_id: str, **kwargs) -> None:
-        """Add an entry with its fields to a list."""
-        elements = await self.get_list_elements(list_short_id)
+    async def create_entry(
+        self,
+        list_short_id: str,
+        entry_id: str,
+        checklist: dict | None = None,
+        **kwargs,
+    ) -> None:
+        """Add an entry with its fields to a list.
+
+        `checklist` is `{"name": ..., "items": [text, ...]}`, its items unchecked.
+        """
         # https://base.zenkit.com/docs/api/entries/post-api-v1-lists-listid-entries
         url = f"{API_URL}/lists/{list_short_id}/entries"
         data = {
             "uuid": entry_id,
-            **_entry_fields(elements, list_short_id, **kwargs),
+            **await self._write_fields(list_short_id, **kwargs),
         }
+        if checklist is not None:
+            # Not an element, written with the entry, see docs/zenkit/zenkit-todo.md
+            data["checklists"] = [_checklist(checklist["name"], checklist["items"])]
         response = await asyncio.to_thread(
             requests.post, url, headers=self.headers, json=data
         )
@@ -310,9 +402,7 @@ class Zenkit:
         if not kwargs:
             return None
 
-        # Fetched on each write, so renamed or added fields and options are picked up
-        elements = await self.get_list_elements(list_short_id)
-        update = _entry_fields(elements, list_short_id, **kwargs)
+        update = await self._write_fields(list_short_id, **kwargs)
 
         # https://base.zenkit.com/docs/api/entries/put-api-v1-lists-listid-entries-listentryid
         url = f"{API_URL}/lists/{list_short_id}/entries/{entry_id}"
@@ -325,6 +415,27 @@ class Zenkit:
             raise Exception("Error updating list entry")
 
         return response.raise_for_status()
+
+    async def _write_fields(self, list_short_id: str, **kwargs) -> dict:
+        """Get the entry fields to write the given values to a list."""
+        # Fetched on each write, so renamed or added fields and options are picked up
+        elements = await self.get_list_elements(list_short_id)
+        users = None
+        if kwargs.get("assignees"):
+            users = await self.get_list_users(list_short_id)
+        return _entry_fields(elements, list_short_id, users, **kwargs)
+
+    async def get_list_users(self, list_any_id: str) -> list[dict]:
+        """Get the members of a list, they can be assigned to its entries."""
+        # Not in the docs, see docs/zenkit/zenkit-todo.md#writing-entries
+        url = f"{API_URL}/lists/{list_any_id}/users"
+        response = await asyncio.to_thread(requests.get, url, headers=self.headers)
+        if response.status_code != 200:
+            _log_error(response, "Failed to fetch users of list %s", list_any_id)
+            raise UpdateFailedException(
+                "Failed to fetch users of list %s" % list_any_id
+            )
+        return response.json()
 
     async def get_list_elements(self, list_any_id: str) -> list[dict]:
         """Get the elements (fields) of a list."""

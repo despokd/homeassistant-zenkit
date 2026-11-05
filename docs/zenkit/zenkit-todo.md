@@ -10,9 +10,9 @@
 | `stage` | 6 (categories) | Phase | `<uuid>_categories`, `<uuid>_categories_sort` |
 | `notes` | 1 (text) | Notizen | `<uuid>_text` |
 | `dueDate` | 4 (date) | Fälligkeitsdatum | `<uuid>_date` |
-| `assignments` | 14 | Zugewiesen an | |
+| `assignments` | 14 (persons) | Zugewiesen an | `<uuid>_persons`, `<uuid>_persons_sort` |
 | `files` | 15 | Anhänge | |
-| `tags` | 6 (categories) | Tags | |
+| `tags` | 6 (categories) | Tags | `<uuid>_categories`, `<uuid>_categories_sort` |
 | `subtasks` | 18 (subentries) | Subitems | `<uuid>_references`, `_parents`, `_path`, … (see [Sub-items](#sub-items-dependencies-and-checklists)) |
 | `dependencies` | 19 (dependencies) | Abhängigkeiten | `<uuid>_references`, `_tags`, `_milestone` |
 
@@ -41,6 +41,19 @@ Verified against a `taskList` (2026-10-25):
 - One PUT can set several fields, e.g. `{"<titleUuid>_text": "...", "<stageUuid>_categories": [optionId]}`.
 - `POST /lists/{listAllId}/entries` accepts field values next to `uuid`, so an entry can be created with title, notes, due date and status in one request.
 - `POST /lists/{listId}/entries/delete/filter` with `{"listEntryIds": [id]}` deprecates entries: a GET by uuid still returns them with `deprecated_at` set, but the filter endpoint with `allowDeprecated: false` no longer lists them.
+
+Labels and assignees, verified against a `taskList` and a `project` (2026-11-05):
+
+- Labels (`tags`, `elementData.multiple: true`) are written like the status: `{"<uuid>_categories": [optionId, ...]}`. Options are `elementData.predefinedCategories` with `resourceRole: null`.
+- New options can't be created through the API: `POST /lists/{listAllId}/elements/{elementAllId}/categories` (and variants with numeric ids or `predefinedcategories`) return `404`. Labels have to be added in Zenkit first.
+- `taskList`s have no `tags` element, `project`s have one.
+- Assignees (`assignments`, category 14): `{"<uuid>_persons": [userId, ...]}` with numeric user ids. Zenkit returns `<uuid>_persons_sort` with `id`, `displayname`, `username`, `initials` and the image fields.
+- The members of a list come from `GET /lists/{listAllId}/users` (not in the docs): users with `id`, `displayname`, `fullname`, `username` and `roleId` (e.g. `listOwner`), but no email.
+
+Checklists, verified against a `taskList` (2026-11-05):
+
+- `POST /lists/{listAllId}/entries` accepts `"checklists": [{"uuid", "name", "items": [{"text", "checked"}], "shouldCheckedItemsBeHidden"}]` next to the fields, so a new entry gets its checklists in one request. Each checklist needs a `uuid` (`400` `C21` without), items are only `text` and `checked`.
+- `PUT /lists/{listAllId}/entries/{entryAllId}/checklists` takes `{"checklists": [...]}` (a bare array is rejected with `400`) and replaces all checklists of the entry.
 
 Text and date fields, verified against a `taskList` (2026-10-25):
 

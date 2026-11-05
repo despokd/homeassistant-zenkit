@@ -1,0 +1,7 @@
+{
+  "services": {
+    "create_entry": {
+      "service": "mdi:clipboard-plus-outline"
+    }
+  }
+}

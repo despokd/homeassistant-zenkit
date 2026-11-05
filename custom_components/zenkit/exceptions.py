@@ -1,6 +1,8 @@
 """Errors for the Zenkit component."""
 
-from homeassistant.exceptions import HomeAssistantError
+from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
+
+from .const import DOMAIN
 
 
 class ZenkitException(HomeAssistantError):
@@ -17,3 +19,15 @@ class CannotLoginException(ZenkitException):
 
 class UpdateFailedException(ZenkitException):
     """Error during update data from Zenkit."""
+
+
+class InvalidValueException(ZenkitException, ServiceValidationError):
+    """A value to write doesn't fit the fields of a list."""
+
+    def __init__(self, translation_key: str, **placeholders: str) -> None:
+        """Initialize with a translated message."""
+        super().__init__(
+            translation_domain=DOMAIN,
+            translation_key=translation_key,
+            translation_placeholders=placeholders,
+        )
