@@ -13,7 +13,6 @@ from homeassistant.components.sensor import (
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.device_registry import DeviceInfo
@@ -24,7 +23,7 @@ from homeassistant.util import dt as dt_util, slugify
 
 from .api import user_image_url
 from .const import DOMAIN
-from .coordinator import ZenkitDataUpdateCoordinator
+from .coordinator import ZenkitConfigEntry, ZenkitDataUpdateCoordinator
 from .elements import due_element
 from .entity import async_add_list_entities
 from .todo import _completion_status, _due_date
@@ -398,10 +397,12 @@ LIST_SENSORS: tuple[ZenkitListSensorEntityDescription, ...] = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
+    hass: HomeAssistant,
+    entry: ZenkitConfigEntry,
+    async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up the Zenkit sensor platform config entry."""
-    coordinator = hass.data[DOMAIN][entry.entry_id]
+    coordinator = entry.runtime_data
     async_add_entities(
         ZenkitSensor(coordinator, entry.entry_id, description)
         for description in SENSORS

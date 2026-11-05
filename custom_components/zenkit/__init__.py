@@ -20,7 +20,7 @@ from homeassistant.helpers.typing import ConfigType
 from .const import DOMAIN
 from .api import Zenkit
 from .exceptions import CannotConnectException, CannotLoginException
-from .coordinator import ZenkitDataUpdateCoordinator
+from .coordinator import ZenkitConfigEntry, ZenkitDataUpdateCoordinator
 from .services import async_setup_services
 
 _LOGGER = logging.getLogger(__name__)
@@ -40,7 +40,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     return True
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(hass: HomeAssistant, entry: ZenkitConfigEntry) -> bool:
     """Set up Zenkit from a config entry."""
 
     api_key = entry.data[CONF_TOKEN]
@@ -60,13 +60,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     _set_unique_id(hass, entry, str(user["id"]))
 
-    coordinator = ZenkitDataUpdateCoordinator(hass, zk, user, entry.entry_id)
+    coordinator = ZenkitDataUpdateCoordinator(hass, zk, user, entry)
     coordinator.models = await _async_device_models(hass)
     await coordinator.async_config_entry_first_refresh()
     _register_devices(hass, entry, coordinator)
 
-    hass.data.setdefault(DOMAIN, {})
-    hass.data[DOMAIN][entry.entry_id] = coordinator
+    entry.runtime_data = coordinator
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
@@ -108,7 +107,9 @@ async def _async_device_models(hass: HomeAssistant) -> dict[str, str]:
 
 
 def _register_devices(
-    hass: HomeAssistant, entry: ConfigEntry, coordinator: ZenkitDataUpdateCoordinator
+    hass: HomeAssistant,
+    entry: ZenkitConfigEntry,
+    coordinator: ZenkitDataUpdateCoordinator,
 ) -> None:
     """Register the account and organization devices, list devices link to them."""
     registry = dr.async_get(hass)
@@ -149,7 +150,9 @@ def _migrate_account_device(
 
 @callback
 def _update_list_devices(
-    hass: HomeAssistant, entry: ConfigEntry, coordinator: ZenkitDataUpdateCoordinator
+    hass: HomeAssistant,
+    entry: ZenkitConfigEntry,
+    coordinator: ZenkitDataUpdateCoordinator,
 ) -> None:
     """Follow renamed and removed lists, new lists get devices with their entities.
 
@@ -182,19 +185,15 @@ def _update_list_devices(
 
 
 async def async_remove_config_entry_device(
-    hass: HomeAssistant, entry: ConfigEntry, device: dr.DeviceEntry
+    hass: HomeAssistant, entry: ZenkitConfigEntry, device: dr.DeviceEntry
 ) -> bool:
     """Allow removing devices of lists that no longer exist."""
-    coordinator = hass.data[DOMAIN][entry.entry_id]
-    return not device.identifiers & coordinator.device_identifiers
+    return not device.identifiers & entry.runtime_data.device_identifiers
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(hass: HomeAssistant, entry: ZenkitConfigEntry) -> bool:
     """Unload a config entry."""
-    if unload_ok := await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
-        hass.data[DOMAIN].pop(entry.entry_id)
-
-    return unload_ok
+    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
 
 
 async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:

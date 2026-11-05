@@ -12,7 +12,6 @@ from homeassistant.components.todo import (
     TodoListEntity,
     TodoListEntityFeature,
 )
-from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, ServiceResponse, callback
 from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -20,7 +19,7 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.util import dt as dt_util
 
 from .const import DOMAIN, DUE_DATE_FORMAT, COMPLETED_COLOR
-from .coordinator import ZenkitDataUpdateCoordinator
+from .coordinator import ZenkitConfigEntry, ZenkitDataUpdateCoordinator
 from .entity import async_add_list_entities
 from .elements import (
     dependencies_element,
@@ -41,10 +40,12 @@ DEFAULT_CHECKLIST_NAME = "Checklist"
 
 
 async def async_setup_entry(
-    hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
+    hass: HomeAssistant,
+    entry: ZenkitConfigEntry,
+    async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up the Zenkit todo platform config entry."""
-    coordinator = hass.data[DOMAIN][entry.entry_id]
+    coordinator = entry.runtime_data
     async_add_list_entities(
         coordinator,
         entry,

@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from homeassistant.components.image import ImageEntity
-from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
@@ -11,17 +10,19 @@ from homeassistant.util import dt as dt_util
 
 from .api import user_image_url
 from .const import DOMAIN
-from .coordinator import ZenkitDataUpdateCoordinator
+from .coordinator import ZenkitConfigEntry, ZenkitDataUpdateCoordinator
 
 # Pixels of the profile image, Zenkit scales it on request
 IMAGE_SIZE = 256
 
 
 async def async_setup_entry(
-    hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
+    hass: HomeAssistant,
+    entry: ZenkitConfigEntry,
+    async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up the Zenkit image platform config entry."""
-    coordinator = hass.data[DOMAIN][entry.entry_id]
+    coordinator = entry.runtime_data
     async_add_entities([ZenkitProfileImage(hass, coordinator, entry.entry_id)])
 
 

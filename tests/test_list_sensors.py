@@ -7,7 +7,6 @@ import pytest
 
 from homeassistant.util import dt as dt_util
 
-from custom_components.zenkit.const import DOMAIN
 from custom_components.zenkit.sensor import (
     LIST_SENSORS,
     ZenkitListSensor,
@@ -130,9 +129,10 @@ def test_ids_and_name():
 
 async def _keys(coordinator):
     hass = MagicMock()
-    hass.data = {DOMAIN: {"entry": coordinator}}
     added = []
-    await async_setup_entry(hass, MagicMock(entry_id="entry"), added.extend)
+    await async_setup_entry(
+        hass, MagicMock(entry_id="entry", runtime_data=coordinator), added.extend
+    )
     return {e.entity_description.key for e in added if isinstance(e, ZenkitListSensor)}
 
 

@@ -45,9 +45,9 @@ async def test_duplicate_account_keeps_no_unique_id(hass):
     assert entry.unique_id is None
 
 
-def _coordinator(hass, entry_id, lists=()):
+def _coordinator(hass, entry, lists=()):
     coordinator = ZenkitDataUpdateCoordinator(
-        hass, MagicMock(), {"id": 906842, "username": "u"}, entry_id
+        hass, MagicMock(), {"id": 906842, "username": "u"}, entry
     )
     coordinator.user["organizationId"] = 560986
     coordinator.organization = {"name": "Org"}
@@ -64,7 +64,7 @@ def _device(hass, entry, identifier):
 async def test_registers_account_and_organization_devices(hass):
     entry = MockConfigEntry(domain=DOMAIN, version=2)
     entry.add_to_hass(hass)
-    coordinator = _coordinator(hass, entry.entry_id)
+    coordinator = _coordinator(hass, entry)
 
     _register_devices(hass, entry, coordinator)
 
@@ -85,7 +85,7 @@ async def test_migrates_old_device_to_account_device(hass):
     )
     registry.async_update_device(old.id, area_id="office")
 
-    _register_devices(hass, entry, _coordinator(hass, entry.entry_id))
+    _register_devices(hass, entry, _coordinator(hass, entry))
 
     device = registry.async_get(old.id)
     assert device.identifiers == {(DOMAIN, f"{entry.entry_id}_account_906842")}
@@ -103,7 +103,7 @@ async def test_account_configured_twice_gets_two_account_devices(hass):
         )
 
     for entry in entries:
-        _register_devices(hass, entry, _coordinator(hass, entry.entry_id))
+        _register_devices(hass, entry, _coordinator(hass, entry))
 
     for entry in entries:
         assert _device(hass, entry, "account_906842") is not None
@@ -122,7 +122,7 @@ async def test_old_device_removed_if_account_device_exists(hass):
         config_entry_id=entry.entry_id, identifiers={(DOMAIN, "906842")}
     )
 
-    _register_devices(hass, entry, _coordinator(hass, entry.entry_id))
+    _register_devices(hass, entry, _coordinator(hass, entry))
 
     assert registry.async_get(old.id) is None
 
@@ -131,9 +131,9 @@ async def test_only_stale_devices_can_be_removed(hass):
     entry = MockConfigEntry(domain=DOMAIN, version=2)
     entry.add_to_hass(hass)
     coordinator = _coordinator(
-        hass, entry.entry_id, [{"uuid": "u", "shortId": "a", "name": "A"}]
+        hass, entry, [{"uuid": "u", "shortId": "a", "name": "A"}]
     )
-    hass.data[DOMAIN] = {entry.entry_id: coordinator}
+    entry.runtime_data = coordinator
     registry = dr.async_get(hass)
 
     def device(identifier):
@@ -163,7 +163,7 @@ async def test_device_of_removed_list_is_removed_with_entities(hass):
     entry.add_to_hass(hass)
     kept = {"uuid": "u", "shortId": "a", "name": "A"}
     gone = {"uuid": "gone", "shortId": "b", "name": "B"}
-    coordinator = _coordinator(hass, entry.entry_id, [kept, gone])
+    coordinator = _coordinator(hass, entry, [kept, gone])
     _register_devices(hass, entry, coordinator)
     devices = dr.async_get(hass)
     entities = er.async_get(hass)
@@ -196,7 +196,7 @@ async def test_device_of_renamed_list_is_renamed(hass):
     entry = MockConfigEntry(domain=DOMAIN, version=2)
     entry.add_to_hass(hass)
     zenkit_list = {"uuid": "u", "shortId": "a", "name": "A"}
-    coordinator = _coordinator(hass, entry.entry_id, [zenkit_list])
+    coordinator = _coordinator(hass, entry, [zenkit_list])
     devices = dr.async_get(hass)
     device = devices.async_get_or_create(
         config_entry_id=entry.entry_id, **coordinator.list_device_info(zenkit_list)

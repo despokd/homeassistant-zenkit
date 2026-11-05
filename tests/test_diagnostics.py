@@ -41,7 +41,7 @@ async def test_diagnostics_redacts_secrets(hass):
     coordinator.zk.elements = {
         "a": [{"uuid": "t", "name": "Titel", "resourceRole": "title", "x": 1}]
     }
-    hass.data[DOMAIN] = {entry.entry_id: coordinator}
+    entry.runtime_data = coordinator
 
     diagnostics = await async_get_config_entry_diagnostics(hass, entry)
 
