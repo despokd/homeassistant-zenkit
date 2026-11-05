@@ -33,7 +33,7 @@ Items are completed by the list's status field. Lists without one (or without a 
 
 ### Calendars
 
-Each list with a due date field also gets a read-only calendar entity, e.g. `calendar.jane_doe_groceries`. Its events are the open items with a due date:
+Each list with a due date field also gets a read-only calendar entity, e.g. `calendar.groceries` (calendars added before the list devices keep their id, e.g. `calendar.jane_doe_groceries`). Its events are the open items with a due date:
 
 - Items with a date only are all-day events, items with a time are events at that point in time (Zenkit stores the time in UTC, Home Assistant shows it in its time zone).
 - Items with a date range span from the start to the end date.
@@ -46,7 +46,7 @@ The calendar is `on` while an event is ongoing, which for all-day items is the w
 triggers:
   - trigger: calendar
     event: start
-    entity_id: calendar.jane_doe_groceries
+    entity_id: calendar.groceries
 ```
 
 Lists whose fields could not be loaded at setup get their calendar after a reload of the integration.
@@ -67,7 +67,7 @@ The integration groups its entities into devices:
 
 The integration page shows the account and organization under services and the lists under devices. List and organization devices are linked to the account device ("Connected via"). Models are in the language of Home Assistant at setup. The todo list and calendar are named after their list device, the count sensors are e.g. "Groceries Open entries".
 
-Installs from before the grouping keep their device, with its area and name, as the account device. Entity ids stay the same. Devices of lists deleted in Zenkit can be deleted on their device page after a reload of the integration.
+Installs from before the grouping keep their device, with its area and name, as the account device. Entity ids stay the same. Lists are loaded at setup: new lists and projects get their device after a reload of the integration (Settings > Devices & services > Zenkit > ⋮ > Reload) or a restart of Home Assistant. Devices of lists deleted in Zenkit can be deleted on their device page after a reload.
 
 Each Zenkit account can only be added once.
 
