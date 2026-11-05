@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.0](https://github.com/despokd/homeassistant-zenkit/compare/v1.2.0...v1.3.0) (2026-11-05)
+
+
+### Features
+
+* send Assist shopping list sentences to a chosen Zenkit list ([#16](https://github.com/despokd/homeassistant-zenkit/issues/16)) ([#67](https://github.com/despokd/homeassistant-zenkit/issues/67)) ([50cd1b0](https://github.com/despokd/homeassistant-zenkit/commit/50cd1b081e89bd4161e145d4a277c4df3682533f))
+
 ## [1.2.0](https://github.com/despokd/homeassistant-zenkit/compare/v1.1.0...v1.2.0) (2026-11-05)
 
 
