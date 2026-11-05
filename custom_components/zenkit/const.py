@@ -16,3 +16,5 @@ DUE_DATE_FORMAT = "%Y-%m-%d"
 DUE_DATETIME_FORMAT = "%Y-%m-%dT%H:%M:%S.000Z"
 # Color of Zenkit's default "done" status, used when a list has no element roles
 COMPLETED_COLOR = "#3ba744"
+# Option: uuid of the list that gets Assist's shopping list sentences
+CONF_SHOPPING_LIST = "shopping_list"

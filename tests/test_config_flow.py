@@ -1,6 +1,6 @@
 """Tests for the Zenkit config flow."""
 
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -9,7 +9,7 @@ from homeassistant.const import CONF_TOKEN
 from homeassistant.data_entry_flow import FlowResultType
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
-from custom_components.zenkit.const import DOMAIN
+from custom_components.zenkit.const import CONF_SHOPPING_LIST, DOMAIN
 from custom_components.zenkit.exceptions import (
     CannotConnectException,
     CannotLoginException,
@@ -76,3 +76,41 @@ async def test_errors(hass, login, error, reason):
 
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {"base": reason}
+
+
+async def test_options_choose_shopping_list(hass):
+    entry = MockConfigEntry(domain=DOMAIN, unique_id="906842", version=2)
+    entry.add_to_hass(hass)
+    entry.runtime_data = MagicMock(
+        lists=[
+            {"uuid": "b-uuid", "name": "groceries"},
+            {"uuid": "a-uuid", "name": "Chores"},
+        ]
+    )
+
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+
+    assert result["type"] is FlowResultType.FORM
+    (field,) = result["data_schema"].schema.values()
+    assert [option["label"] for option in field.config["options"]] == [
+        "Chores",
+        "groceries",
+    ]
+
+    with patch("custom_components.zenkit.async_setup_entry", return_value=True):
+        result = await hass.config_entries.options.async_configure(
+            result["flow_id"], {CONF_SHOPPING_LIST: "b-uuid"}
+        )
+
+    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert entry.options == {CONF_SHOPPING_LIST: "b-uuid"}
+
+
+async def test_options_of_unloaded_entry_have_no_lists(hass):
+    entry = MockConfigEntry(domain=DOMAIN, unique_id="906842", version=2)
+    entry.add_to_hass(hass)
+
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+
+    (field,) = result["data_schema"].schema.values()
+    assert field.config["options"] == []

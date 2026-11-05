@@ -8,6 +8,21 @@ Go to Configuration -> Integrations and click on "add integration". Then search 
 
 - __token__: Your API Key from Your Account > Integrations > API Key
 
+### Assist shopping list
+
+Assist sends sentences without a list name, like "add milk to my shopping list" or "füge Milch zur Einkaufsliste hinzu", to Home Assistant's Shopping List integration. This happens even when Shopping List is not set up, and then the sentence fails. To send them to a Zenkit list instead, choose it in Settings > Devices & services > Zenkit > ⚙ (Configure) > __Shopping list for Assist__.
+
+The list then gets these sentences in English and German (English for other Home Assistant languages):
+
+| Sentence | Does |
+| --- | --- |
+| "add milk to my shopping list", "put milk on the list" | Adds the item. An open item with the same name (ignoring case) is not added twice |
+| "check off milk from my shopping list", "remove milk from the list" | Completes the open item with that name, or answers that it's not on the list |
+| "füge Milch zur Einkaufsliste hinzu", "setze Milch auf die Liste", "Milch zum Einkauf hinzufügen" | Adds the item |
+| "streiche Milch von der Einkaufsliste", "nimm Milch aus der Liste raus", "hake Milch auf der Liste ab" | Completes the item |
+
+A preposition is needed right before the list ("zur Liste", not "Liste"), so sentences with another list name, like "füge Putzen zur Haushaltsliste hinzu", still go to that list. Like sentence triggers of automations, they are handled before the conversation agent of a voice assistant, LLM agents included. They are not shared with the Shopping List integration: while a Zenkit list is chosen, Shopping List doesn't get them. Clear the option to undo this. If more than one Zenkit account chooses a list, each one gets the item.
+
 ### List attributes
 
 Each todo entity has attributes for where its list is in Zenkit:

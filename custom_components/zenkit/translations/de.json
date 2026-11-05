@@ -17,6 +17,20 @@
             "already_configured": "Konto ist bereits konfiguriert"
         }
     },
+    "options": {
+        "step": {
+            "init": {
+                "title": "Optionen",
+                "description": "Assist leitet Sätze wie „füge Milch zur Einkaufsliste hinzu“ an die Integration Einkaufsliste weiter, auch wenn sie nicht eingerichtet ist. Wählen Sie eine Zenkit-Liste, die diese Sätze stattdessen erhält.",
+                "data": {
+                    "shopping_list": "Einkaufsliste für Assist"
+                },
+                "data_description": {
+                    "shopping_list": "Leer lassen, um das Standardverhalten von Home Assistant beizubehalten."
+                }
+            }
+        }
+    },
     "device": {
         "account": {
             "name": "Konto"

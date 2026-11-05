@@ -1,1 +1,5 @@
 pytest-homeassistant-custom-component
+# Requirements of the conversation integration, for the Assist sentences
+gazetteer-matcher
+hassil
+home-assistant-intents

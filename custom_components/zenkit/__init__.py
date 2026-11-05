@@ -19,6 +19,7 @@ from homeassistant.helpers.typing import ConfigType
 
 from .const import DOMAIN
 from .api import Zenkit
+from .assist import async_setup_shopping_list
 from .exceptions import CannotConnectException, CannotLoginException
 from .coordinator import ZenkitConfigEntry, ZenkitDataUpdateCoordinator
 from .services import async_setup_services
@@ -75,6 +76,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ZenkitConfigEntry) -> bo
 
     update_list_devices()
     entry.async_on_unload(coordinator.async_add_listener(update_list_devices))
+    async_setup_shopping_list(hass, entry)
 
     return True
 
