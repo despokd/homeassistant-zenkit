@@ -21,6 +21,7 @@ from homeassistant.util import dt as dt_util
 
 from .const import DOMAIN, DUE_DATE_FORMAT, COMPLETED_COLOR
 from .coordinator import ZenkitDataUpdateCoordinator
+from .entity import async_add_list_entities
 from .elements import (
     dependencies_element,
     due_element,
@@ -39,40 +40,31 @@ ITEM_DETAILS = "item_details"
 
 async def async_setup_entry(
     hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
-) -> bool:
+) -> None:
     """Set up the Zenkit todo platform config entry."""
     coordinator = hass.data[DOMAIN][entry.entry_id]
-
-    lists = await coordinator.async_get_lists()
-    if lists is None:
-        _LOGGER.warning("No lists found")
-        return False
-
-    listEntities = []
-    for list in lists:
-        listId = list["id"]
-        listShortId = list["shortId"]
-
-        listEntities.append(
+    async_add_list_entities(
+        coordinator,
+        entry,
+        async_add_entities,
+        lambda zenkit_list: [
             ZenkitTodoListEntity(
                 coordinator,
-                listId,
-                listShortId,
-                list["uuid"],
-                list["name"],
-                _list_icon(list),
-                {**(list.get("_folder") or {}), **_list_attributes(list)},
-                resource_type=list.get("resourceType"),
+                zenkit_list["id"],
+                zenkit_list["shortId"],
+                zenkit_list["uuid"],
+                zenkit_list["name"],
+                _list_icon(zenkit_list),
+                _all_list_attributes(zenkit_list),
+                resource_type=zenkit_list.get("resourceType"),
             )
-        )
+        ],
+    )
 
-    async_add_entities(listEntities)
 
-    if not listEntities:
-        _LOGGER.warning("No lists added")
-        return False
-
-    return True
+def _all_list_attributes(zenkit_list: dict[str, Any]) -> dict[str, Any]:
+    """Get the folder path and appearance of a list."""
+    return {**(zenkit_list.get("_folder") or {}), **_list_attributes(zenkit_list)}
 
 
 def _list_attributes(list: dict[str, Any]) -> dict[str, Any]:
@@ -305,6 +297,12 @@ class ZenkitTodoListEntity(
     @callback
     def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator."""
+
+        if (zenkit_list := self.coordinator.get_list(self.list_short_id)) is not None:
+            # Renamed or moved in Zenkit, the device is renamed in __init__.py
+            self.list_name = zenkit_list["name"]
+            self._attr_icon = _list_icon(zenkit_list)
+            self._attr_extra_state_attributes = _all_list_attributes(zenkit_list)
 
         items = []
         details = {}

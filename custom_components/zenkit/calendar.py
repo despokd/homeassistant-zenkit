@@ -15,6 +15,7 @@ from homeassistant.util import dt as dt_util
 from .const import DOMAIN, DUE_DATE_FORMAT
 from .coordinator import ZenkitDataUpdateCoordinator
 from .elements import due_element
+from .entity import async_add_list_entities
 from .todo import _completion_status, _description, _list_icon
 
 _LOGGER = logging.getLogger(__name__)
@@ -26,12 +27,17 @@ async def async_setup_entry(
     """Set up a calendar for each Zenkit list with a due date field."""
     coordinator: ZenkitDataUpdateCoordinator = hass.data[DOMAIN][entry.entry_id]
 
-    # The first refresh fetched the fields, lists whose fields failed are skipped
-    async_add_entities(
-        ZenkitCalendarEntity(coordinator, zenkit_list)
-        for zenkit_list in coordinator.lists
-        if due_element(coordinator.zk.elements.get(zenkit_list["shortId"]) or [])
-        is not None
+    # Lists whose fields are not known yet get their calendar once they are
+    async_add_list_entities(
+        coordinator,
+        entry,
+        async_add_entities,
+        lambda zenkit_list: (
+            [ZenkitCalendarEntity(coordinator, zenkit_list)]
+            if due_element(coordinator.zk.elements.get(zenkit_list["shortId"]) or [])
+            is not None
+            else []
+        ),
     )
 
 
@@ -113,6 +119,9 @@ class ZenkitCalendarEntity(
     @callback
     def _handle_coordinator_update(self) -> None:
         """Get the events of the open entries with a due date."""
+        if (zenkit_list := self.coordinator.get_list(self.list_short_id)) is not None:
+            # The icon may have changed in Zenkit
+            self._attr_icon = _list_icon(zenkit_list)
         elements = self.coordinator.zk.elements.get(self.list_short_id) or []
         due = due_element(elements)
         events = []

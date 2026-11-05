@@ -265,3 +265,74 @@ def test_no_link_before_account_device_is_registered(coordinator):
     info = coordinator.list_device_info({"uuid": "u", "shortId": "a", "name": "A"})
 
     assert "via_device_id" not in info
+
+
+async def test_lists_are_not_refetched_within_interval(coordinator):
+    await coordinator._async_update_data()
+
+    await coordinator._async_update_data()
+
+    coordinator.zk.get_lists.assert_awaited_once()
+
+
+async def test_lists_are_refetched_after_interval(coordinator, entries, freezer):
+    await coordinator._async_update_data()
+    coordinator.zk.get_lists.return_value = [*LISTS, {"shortId": "c", "name": "C"}]
+    entries["c"] = [{"uuid": "c1"}]
+    coordinator.zk.elements["c"] = []
+    freezer.tick(3600)
+
+    data = await coordinator._async_update_data()
+
+    assert [list["shortId"] for list in coordinator.lists] == ["a", "b", "c"]
+    assert data["c"] == [{"uuid": "c1"}]
+
+
+async def test_force_refresh_refetches_lists(coordinator):
+    coordinator.zk.get_list_elements = AsyncMock()
+    await coordinator._async_update_data()
+
+    await coordinator.async_force_refresh()
+
+    assert coordinator.zk.get_lists.await_count == 2
+
+
+async def test_removed_list_is_forgotten(coordinator, entries, freezer):
+    entries["b"] = UpdateFailedException("down")
+    await coordinator._async_update_data()
+    coordinator.zk.get_lists.return_value = LISTS[:1]
+    freezer.tick(3600)
+
+    data = await coordinator._async_update_data()
+
+    assert data == {"a": [{"uuid": "a1"}]}
+    assert coordinator.get_list("b") is None
+    assert "b" not in coordinator.zk.elements
+    assert coordinator.failed_lists == set()
+
+
+async def test_failed_list_fetch_keeps_lists_and_retries(coordinator, freezer):
+    await coordinator._async_update_data()
+    coordinator.zk.get_lists.side_effect = UpdateFailedException("down")
+    freezer.tick(3600)
+
+    data = await coordinator._async_update_data()
+    await coordinator._async_update_data()
+
+    assert coordinator.lists == LISTS
+    assert data == {"a": [{"uuid": "a1"}], "b": [{"uuid": "b1"}]}
+    assert coordinator.zk.get_lists.await_count == 3
+
+
+async def test_first_failed_list_fetch_fails_update(coordinator):
+    coordinator.zk.get_lists.side_effect = UpdateFailedException("down")
+
+    with pytest.raises(UpdateFailed):
+        await coordinator._async_update_data()
+
+
+def test_get_list(coordinator):
+    coordinator._lists = LISTS
+
+    assert coordinator.get_list("b") == LISTS[1]
+    assert coordinator.get_list("gone") is None

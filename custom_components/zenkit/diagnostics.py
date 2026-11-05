@@ -38,7 +38,7 @@ async def async_get_config_entry_diagnostics(
     """Return diagnostics for a config entry."""
     coordinator = hass.data[DOMAIN][entry.entry_id]
     lists = []
-    for list in await coordinator.async_get_lists() or []:
+    for list in coordinator.lists:
         short_id = list["shortId"]
         elements = coordinator.zk.elements.get(short_id)
         entries = (coordinator.data or {}).get(short_id)

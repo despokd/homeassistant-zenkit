@@ -25,7 +25,7 @@ How the list looks in Zenkit, each `null` if unset:
 - __image_id__ / __cover_image_id__: Zenkit file id of the list image and cover image. The images themselves need your API key, so Home Assistant can't show them yet
 - __background_id__: Zenkit id of the list background
 
-Example template: `{{ state_attr('todo.groceries', 'folder_path') | join(' / ') }}`. Renamed or moved lists and folders are picked up after a reload of the integration.
+Example template: `{{ state_attr('todo.groceries', 'folder_path') | join(' / ') }}`. Renamed or moved lists and folders are picked up within an hour, or right away with the [refresh button](#refresh-button).
 
 ### Lists without status
 
@@ -49,11 +49,11 @@ triggers:
     entity_id: calendar.groceries
 ```
 
-Lists whose fields could not be loaded at setup get their calendar after a reload of the integration.
+Lists whose fields could not be loaded yet get their calendar once they are.
 
 ### Refresh button
 
-Data is polled every 60 seconds. Press the __Refresh Zenkit data__ button (`button.zenkit_refresh`) to update all lists immediately, e.g. after changing list fields in Zenkit. It can also be pressed from automations with the `button.press` action. New lists still require a reload of the integration.
+Data is polled every 60 seconds. Press the __Refresh Zenkit data__ button (`button.zenkit_refresh`) to update all lists immediately, e.g. after changing list fields in Zenkit. It can also be pressed from automations with the `button.press` action. It also picks up added, removed, renamed and moved lists, which are otherwise checked every hour.
 
 ### Devices
 
@@ -67,7 +67,7 @@ The integration groups its entities into devices:
 
 The integration page shows the account and organization under services and the lists under devices. List and organization devices are linked to the account device ("Connected via"). Models are in the language of Home Assistant at setup. The todo list and calendar are named after their list device, the count sensors are e.g. "Groceries Open entries".
 
-Installs from before the grouping keep their device, with its area and name, as the account device. Entity ids stay the same. Lists are loaded at setup: new lists and projects get their device after a reload of the integration (Settings > Devices & services > Zenkit > ⋮ > Reload) or a restart of Home Assistant. Devices of lists deleted in Zenkit can be deleted on their device page after a reload.
+Installs from before the grouping keep their device, with its area and name, as the account device. Entity ids stay the same. Lists are checked every hour and on the refresh button: new lists and projects get their device and entities, devices of lists deleted in Zenkit are removed with their entities, and renamed lists rename their device. A name you gave the device in Home Assistant is kept.
 
 Each Zenkit account can only be added once.
 

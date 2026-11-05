@@ -59,6 +59,7 @@ def coordinator():
     """Coordinator with known fields of the list."""
     coordinator = MagicMock()
     coordinator.lists = [LIST]
+    coordinator.get_list.return_value = LIST
     coordinator.zk.elements = {"list": ELEMENTS}
     coordinator.failed_lists = set()
     coordinator.data = {
@@ -175,3 +176,24 @@ async def test_only_lists_with_due_date_field(coordinator):
     await async_setup_entry(hass, MagicMock(entry_id="entry"), added.extend)
 
     assert [entity.unique_id for entity in added] == ["list-uuid"]
+
+
+async def test_calendar_added_once_fields_are_known(coordinator):
+    coordinator.zk.elements = {}
+    hass = MagicMock()
+    hass.data = {DOMAIN: {"entry": coordinator}}
+    added = []
+    await async_setup_entry(hass, MagicMock(entry_id="entry"), added.extend)
+    coordinator.zk.elements = {"list": ELEMENTS}
+
+    coordinator.async_add_listener.call_args.args[0]()
+
+    assert [entity.unique_id for entity in added] == ["list-uuid"]
+
+
+async def test_icon_follows_list(entity, coordinator):
+    coordinator.get_list.return_value = {**LIST, "iconClassNames": "fa-tree"}
+    with patch.object(entity, "async_write_ha_state"):
+        entity._handle_coordinator_update()
+
+    assert entity.icon == "mdi:pine-tree"

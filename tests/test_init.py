@@ -2,13 +2,14 @@
 
 from unittest.mock import MagicMock
 
-from homeassistant.helpers import device_registry as dr
+from homeassistant.helpers import device_registry as dr, entity_registry as er
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.zenkit import (
     _async_device_models,
     _register_devices,
     _set_unique_id,
+    _update_list_devices,
     async_remove_config_entry_device,
 )
 from custom_components.zenkit.const import DOMAIN
@@ -154,3 +155,59 @@ async def test_device_models_in_ha_language(hass, enable_custom_integrations):
 
     assert models["account"] == "Konto"
     assert models["task_list"] == "Aufgabenliste"
+
+
+async def test_device_of_removed_list_is_removed_with_entities(hass):
+    entry = MockConfigEntry(domain=DOMAIN, version=2)
+    entry.add_to_hass(hass)
+    kept = {"uuid": "u", "shortId": "a", "name": "A"}
+    gone = {"uuid": "gone", "shortId": "b", "name": "B"}
+    coordinator = _coordinator(hass, entry.entry_id, [kept, gone])
+    _register_devices(hass, entry, coordinator)
+    devices = dr.async_get(hass)
+    entities = er.async_get(hass)
+    for zenkit_list in (kept, gone):
+        device = devices.async_get_or_create(
+            config_entry_id=entry.entry_id,
+            **coordinator.list_device_info(zenkit_list),
+        )
+        entities.async_get_or_create(
+            "todo",
+            DOMAIN,
+            zenkit_list["uuid"],
+            config_entry=entry,
+            device_id=device.id,
+        )
+    coordinator._lists = [kept]
+
+    _update_list_devices(hass, entry, coordinator)
+    await hass.async_block_till_done()
+
+    assert _device(hass, entry, "list_u") is not None
+    assert _device(hass, entry, "list_gone") is None
+    assert _device(hass, entry, "account_906842") is not None
+    assert _device(hass, entry, "organization_560986") is not None
+    assert entities.async_get_entity_id("todo", DOMAIN, "u") is not None
+    assert entities.async_get_entity_id("todo", DOMAIN, "gone") is None
+
+
+async def test_device_of_renamed_list_is_renamed(hass):
+    entry = MockConfigEntry(domain=DOMAIN, version=2)
+    entry.add_to_hass(hass)
+    zenkit_list = {"uuid": "u", "shortId": "a", "name": "A"}
+    coordinator = _coordinator(hass, entry.entry_id, [zenkit_list])
+    devices = dr.async_get(hass)
+    device = devices.async_get_or_create(
+        config_entry_id=entry.entry_id, **coordinator.list_device_info(zenkit_list)
+    )
+    devices.async_update_device(device.id, name_by_user="Mine")
+    coordinator._lists = [
+        {**zenkit_list, "name": "Groceries", "resourceType": "project"}
+    ]
+
+    _update_list_devices(hass, entry, coordinator)
+
+    device = devices.async_get(device.id)
+    assert device.name == "Groceries"
+    assert device.model == "project"
+    assert device.name_by_user == "Mine"

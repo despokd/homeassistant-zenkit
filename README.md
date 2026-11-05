@@ -16,11 +16,12 @@ Bring your [Zenkit](https://zenkit.com) lists into Home Assistant as to-do lists
 
 ## Features
 
-- One **to-do entity per Zenkit list**: add, rename and complete items
+- One **to-do entity per Zenkit list**: add, edit, complete and delete items
 - Item details: description, due date, sub-items, dependencies and checklists
 - A read-only **calendar per list** with the due dates of open items
 - **Count sensors per list**: open, overdue and due today
 - **Account sensors**: unread notifications, number of lists, profile and organization data
+- Added, removed and renamed lists are picked up without a reload
 - A **refresh button** to update all lists immediately
 - English and German translations
 
@@ -51,14 +52,14 @@ Don't download the `main` branch directly, it can be in development.
 
 [![Open your Home Assistant instance and start setting up a new integration.](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=zenkit)
 
-Each Zenkit account can be added once. All entities belong to one device named after your Zenkit display name.
+Each Zenkit account can be added once. Each list gets a device with its to-do list, calendar and count sensors; account and organization entities are on their own devices.
 
 ## Entities
 
 | Entity | What it is |
 | --- | --- |
 | `todo.<list>` | One per list. State is the number of open items |
-| `calendar.<account>_<list>` | Open items with a due date, for lists with a due date field |
+| `calendar.<list>` | Open items with a due date, for lists with a due date field |
 | `sensor.zenkit_<list>_open_entries` | Open items |
 | `sensor.zenkit_<list>_overdue_entries` | Open items due before now |
 | `sensor.zenkit_<list>_entries_due_today` | Open items due today |
@@ -85,14 +86,13 @@ Act on the due day of an item:
 triggers:
   - trigger: calendar
     event: start
-    entity_id: calendar.jane_doe_groceries
+    entity_id: calendar.groceries
 ```
 
 ## Good to know
 
-- Data is polled every 60 seconds. Press the refresh button for an immediate update.
-- New lists need a reload of the integration.
-- Only the name and the completed state of items can be changed from Home Assistant.
+- Data is polled every 60 seconds, the lists themselves every hour. Press the refresh button for an immediate update.
+- Name, completed state, description and due date of items can be changed from Home Assistant.
 - Lists without a status field show their items in a separate section with an indeterminate checkbox, and can't be completed.
 
 ## Documentation and help
