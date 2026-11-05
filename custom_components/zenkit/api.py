@@ -1,15 +1,18 @@
 """The Zenkit api."""
 
-import requests  # type: ignore
 import asyncio
 import datetime
+import json
 import logging
 import uuid
+from dataclasses import dataclass
+from typing import Any
 
-from requests.exceptions import RequestException  # type: ignore
+import aiohttp
 
 from .const import (
     API_URL,
+    REQUEST_TIMEOUT,
     ENTRIES_LIMIT,
     DUE_DATE_FORMAT,
     DUE_DATETIME_FORMAT,
@@ -47,13 +50,24 @@ SUPPORTED_FIELDS = {
 }
 
 
-def _log_error(response, message: str, *args) -> None:
+@dataclass
+class _Response:
+    """A response with its body read, so it outlives the connection."""
+
+    status: int
+    text: str
+
+    def json(self) -> Any:
+        """Parse the body, raises ValueError if it is not JSON."""
+        return json.loads(self.text)
+
+
+def _log_error(response: _Response, message: str, *args) -> None:
     """Log a failed response, its body may not be JSON (e.g. a proxy error page)."""
     _LOGGER.error(
-        message + ": HTTP %s %s: %s",
+        message + ": HTTP %s: %s",
         *args,
-        response.status_code,
-        response.reason,
+        response.status,
         response.text[:500],
     )
 
@@ -65,9 +79,9 @@ def user_image_url(user: dict, size: int) -> str | None:
     return f"{API_URL}/files/{user['imageLink']}/convert?w={size}&h={size}"
 
 
-def _is_retryable(response) -> bool:
+def _is_retryable(response: _Response) -> bool:
     """Whether a failed request may succeed when sent again."""
-    return response.status_code == 429 or response.status_code >= 500
+    return response.status == 429 or response.status >= 500
 
 
 def _entry_fields(
@@ -210,9 +224,10 @@ def _folder(workspace: dict, workspaces: list[dict]) -> dict:
 class Zenkit:
     """Class to manage fetching Zenkit data with API key authentication."""
 
-    def __init__(self, api_key: str) -> None:
-        """Initialize with the provided API key."""
+    def __init__(self, session: aiohttp.ClientSession, api_key: str) -> None:
+        """Initialize with HA's shared web session and the API key."""
         # https://base.zenkit.com/docs/api/overview/introduction
+        self._session = session
         self.api_key = api_key
         self.headers = {
             "Content-Type": "application/json",
@@ -220,18 +235,36 @@ class Zenkit:
         }
         self.elements: dict[str, list[dict]] = {}
 
+    async def _request(
+        self,
+        method: str,
+        url: str,
+        json: Any = None,
+        params: dict | None = None,
+    ) -> _Response:
+        """Send a request, raises aiohttp.ClientError or TimeoutError."""
+        async with self._session.request(
+            method,
+            url,
+            headers=self.headers,
+            json=json,
+            params=params,
+            timeout=aiohttp.ClientTimeout(total=REQUEST_TIMEOUT),
+        ) as response:
+            return _Response(response.status, await response.text())
+
     async def login(self) -> dict:
         """Login to the Zenkit API, returns the current user."""
         # https://base.zenkit.com/docs/api/overview/authentication
         url = f"{API_URL}/auth/currentuser"
         try:
-            response = await asyncio.to_thread(requests.get, url, headers=self.headers)
-        except RequestException as error:
+            response = await self._request("GET", url)
+        except (aiohttp.ClientError, TimeoutError) as error:
             raise CannotConnectException from error
 
-        if response.status_code == 401:
+        if response.status == 401:
             raise CannotLoginException
-        if response.status_code != 200:
+        if response.status != 200:
             _log_error(response, "Failed to login")
             raise CannotConnectException
         try:
@@ -247,8 +280,8 @@ class Zenkit:
         """Get an organization of the current user, None if it is not one of them."""
         # Not in the docs, /organizations/{id} is no endpoint
         url = f"{API_URL}/users/me/organizations"
-        response = await asyncio.to_thread(requests.get, url, headers=self.headers)
-        if response.status_code != 200:
+        response = await self._request("GET", url)
+        if response.status != 200:
             _log_error(response, "Failed to fetch organizations")
             raise UpdateFailedException("Failed to fetch organizations")
 
@@ -265,8 +298,8 @@ class Zenkit:
         """Get the number of users of an organization."""
         # Not in the docs, also returns the users with their emails
         url = f"{API_URL}/organizations/{organization_id}/users"
-        response = await asyncio.to_thread(requests.get, url, headers=self.headers)
-        if response.status_code != 200:
+        response = await self._request("GET", url)
+        if response.status != 200:
             _log_error(response, "Failed to fetch organization users")
             raise UpdateFailedException("Failed to fetch organization users")
 
@@ -276,10 +309,8 @@ class Zenkit:
         """Get the number of new notifications."""
         # https://base.zenkit.com/docs/api/notifications/get-api-v1-users-me-notifications
         url = f"{API_URL}/users/me/notifications"
-        response = await asyncio.to_thread(
-            requests.get, url, headers=self.headers, params={"limit": 1}
-        )
-        if response.status_code != 200:
+        response = await self._request("GET", url, params={"limit": 1})
+        if response.status != 200:
             _log_error(response, "Failed to fetch notifications")
             raise UpdateFailedException("Failed to fetch notifications")
 
@@ -289,7 +320,7 @@ class Zenkit:
         """Get lists."""
         # https://base.zenkit.com/docs/api/workspaces/get-api-v1-users-me-workspaceswithlists
         url = f"{API_URL}/users/me/workspacesWithLists"
-        response = await asyncio.to_thread(requests.get, url, headers=self.headers)
+        response = await self._request("GET", url)
         workspaces = response.json()
         lists = []
         for workspace in workspaces:
@@ -336,10 +367,8 @@ class Zenkit:
         }
         for delay in (*RETRY_DELAYS, None):
             try:
-                response = await asyncio.to_thread(
-                    requests.post, url, headers=self.headers, json=data
-                )
-            except RequestException as error:
+                response = await self._request("POST", url, json=data)
+            except (aiohttp.ClientError, TimeoutError) as error:
                 _LOGGER.warning(
                     "Failed to fetch entries of list %s at %s: %s",
                     list_short_id,
@@ -348,7 +377,7 @@ class Zenkit:
                 )
                 retry = True
             else:
-                if response.status_code == 200:
+                if response.status == 200:
                     try:
                         return response.json()
                     except ValueError:
@@ -359,7 +388,7 @@ class Zenkit:
                     list_short_id,
                     skip,
                 )
-                retry = response.status_code == 200 or _is_retryable(response)
+                retry = response.status == 200 or _is_retryable(response)
             if delay is None or not retry:
                 break
             await asyncio.sleep(delay)
@@ -372,8 +401,8 @@ class Zenkit:
         """Get list entry."""
         # https://base.zenkit.com/docs/api/entries/get-api-v1-lists-listallid-entries-listentryallid
         url = f"{API_URL}/lists/{list_any_id}/entries/{entry_id}"
-        response = await asyncio.to_thread(requests.get, url, headers=self.headers)
-        if response.status_code != 200:
+        response = await self._request("GET", url)
+        if response.status != 200:
             _log_error(response, "Failed to fetch entry %s", entry_id)
             raise UpdateFailedException("Failed to fetch entry %s" % entry_id)
 
@@ -399,11 +428,9 @@ class Zenkit:
         if checklist is not None:
             # Not an element, written with the entry, see docs/zenkit/zenkit-todo.md
             data["checklists"] = [_checklist(checklist["name"], checklist["items"])]
-        response = await asyncio.to_thread(
-            requests.post, url, headers=self.headers, json=data
-        )
+        response = await self._request("POST", url, json=data)
 
-        if response.status_code != 200:
+        if response.status != 200:
             _log_error(response, "Failed to create entry in list %s", list_short_id)
             raise Exception("Error creating list entry")
 
@@ -416,15 +443,11 @@ class Zenkit:
 
         # https://base.zenkit.com/docs/api/entries/put-api-v1-lists-listid-entries-listentryid
         url = f"{API_URL}/lists/{list_short_id}/entries/{entry_id}"
-        response = await asyncio.to_thread(
-            requests.put, url, headers=self.headers, json=update
-        )
+        response = await self._request("PUT", url, json=update)
 
-        if response.status_code != 200:
+        if response.status != 200:
             _log_error(response, "Failed to update entry %s", entry_id)
             raise Exception("Error updating list entry")
-
-        return response.raise_for_status()
 
     async def _write_fields(self, list_short_id: str, **kwargs) -> dict:
         """Get the entry fields to write the given values to a list."""
@@ -439,8 +462,8 @@ class Zenkit:
         """Get the members of a list, they can be assigned to its entries."""
         # Not in the docs, see docs/zenkit/zenkit-todo.md#writing-entries
         url = f"{API_URL}/lists/{list_any_id}/users"
-        response = await asyncio.to_thread(requests.get, url, headers=self.headers)
-        if response.status_code != 200:
+        response = await self._request("GET", url)
+        if response.status != 200:
             _log_error(response, "Failed to fetch users of list %s", list_any_id)
             raise UpdateFailedException(
                 "Failed to fetch users of list %s" % list_any_id
@@ -451,8 +474,8 @@ class Zenkit:
         """Get the elements (fields) of a list."""
         # https://base.zenkit.com/docs/api/elements/get-api-v1-lists-listallid-elements
         url = f"{API_URL}/lists/{list_any_id}/elements"
-        response = await asyncio.to_thread(requests.get, url, headers=self.headers)
-        if response.status_code != 200:
+        response = await self._request("GET", url)
+        if response.status != 200:
             _log_error(response, "Failed to fetch fields of list %s", list_any_id)
             raise UpdateFailedException(
                 "Failed to fetch fields of list %s" % list_any_id
@@ -478,12 +501,8 @@ class Zenkit:
         data = {
             "listEntryIds": listEntryIds,
         }
-        response = await asyncio.to_thread(
-            requests.post, url, headers=self.headers, json=data
-        )
+        response = await self._request("POST", url, json=data)
 
-        if response.status_code != 200:
+        if response.status != 200:
             _log_error(response, "Failed to delete entries in list %s", list_id)
             raise Exception("Error deleting list entries %s" % entriesIds)
-
-        return response.raise_for_status()

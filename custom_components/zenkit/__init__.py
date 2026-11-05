@@ -13,6 +13,7 @@ from homeassistant.helpers import (
     device_registry as dr,
     entity_registry as er,
 )
+from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.translation import async_get_translations
 from homeassistant.helpers.typing import ConfigType
 
@@ -43,7 +44,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Zenkit from a config entry."""
 
     api_key = entry.data[CONF_TOKEN]
-    zk = Zenkit(api_key)
+    zk = Zenkit(async_get_clientsession(hass), api_key)
 
     try:
         user = await zk.login()
