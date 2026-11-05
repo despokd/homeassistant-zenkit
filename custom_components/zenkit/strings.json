@@ -17,6 +17,26 @@
       "already_configured": "[%key:common::config_flow::abort::already_configured_account%]"
     }
   },
+  "device": {
+    "account": {
+      "name": "Account"
+    },
+    "organization": {
+      "name": "Organization"
+    },
+    "list": {
+      "name": "List"
+    },
+    "task_list": {
+      "name": "To-do list"
+    },
+    "project": {
+      "name": "Project"
+    },
+    "database": {
+      "name": "Database"
+    }
+  },
   "entity": {
     "button": {
       "refresh": {
@@ -118,13 +138,13 @@
         }
       },
       "open_entries": {
-        "name": "{list} open entries"
+        "name": "Open entries"
       },
       "overdue_entries": {
-        "name": "{list} overdue entries"
+        "name": "Overdue entries"
       },
       "entries_due_today": {
-        "name": "{list} entries due today"
+        "name": "Entries due today"
       }
     },
     "image": {

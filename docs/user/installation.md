@@ -1,5 +1,7 @@
 # Installation
 
+Requires Home Assistant 2026.8 or newer.
+
 ## 1. Using the Marketplace (recommended way)
 
 1. Open the Home Assistant Marketplace

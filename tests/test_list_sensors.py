@@ -123,8 +123,8 @@ def test_ids_and_name():
     assert sensor.unique_id == "list-uuid_overdue_entries"
     assert sensor.entity_id == "sensor.zenkit_groceries_overdue_entries"
     assert sensor.translation_key == "overdue_entries"
-    assert sensor._attr_translation_placeholders == {"list": "Groceries"}
-    assert sensor.device_info is sensor.coordinator.device_info
+    assert sensor.device_info is sensor.coordinator.list_device_info.return_value
+    sensor.coordinator.list_device_info.assert_called_with(LIST)
 
 
 async def _keys(coordinator):

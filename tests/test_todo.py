@@ -270,8 +270,12 @@ def test_unavailable_when_only_this_list_failed(entity):
     assert not entity.available
 
 
-def test_entity_belongs_to_account_device(entity):
-    assert entity.device_info is entity.coordinator.device_info
+def test_entity_belongs_to_list_device(entity):
+    assert entity.name is None
+    assert entity.device_info is entity.coordinator.list_device_info.return_value
+    entity.coordinator.list_device_info.assert_called_with(
+        {"uuid": "list-uuid", "shortId": "list", "name": "List", "resourceType": None}
+    )
 
 
 def test_attributes():

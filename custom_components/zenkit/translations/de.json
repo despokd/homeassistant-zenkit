@@ -17,6 +17,26 @@
             "already_configured": "Konto ist bereits konfiguriert"
         }
     },
+    "device": {
+        "account": {
+            "name": "Konto"
+        },
+        "organization": {
+            "name": "Organisation"
+        },
+        "list": {
+            "name": "Liste"
+        },
+        "task_list": {
+            "name": "Aufgabenliste"
+        },
+        "project": {
+            "name": "Projekt"
+        },
+        "database": {
+            "name": "Datenbank"
+        }
+    },
     "entity": {
         "button": {
             "refresh": {
@@ -118,13 +138,13 @@
                 }
             },
             "open_entries": {
-                "name": "{list} offene Einträge"
+                "name": "Offene Einträge"
             },
             "overdue_entries": {
-                "name": "{list} überfällige Einträge"
+                "name": "Überfällige Einträge"
             },
             "entries_due_today": {
-                "name": "{list} heute fällige Einträge"
+                "name": "Heute fällige Einträge"
             }
         },
         "image": {

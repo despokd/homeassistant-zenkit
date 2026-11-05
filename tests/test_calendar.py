@@ -140,7 +140,10 @@ def test_next_event(entity):
 
 def test_appearance(entity):
     assert entity.unique_id == "list-uuid"
-    assert entity.name == "List"
+    # Named after the list device
+    assert entity.name is None
+    assert entity.device_info is entity.coordinator.list_device_info.return_value
+    entity.coordinator.list_device_info.assert_called_with(LIST)
     assert entity.initial_color == "#ff0000"
 
 
