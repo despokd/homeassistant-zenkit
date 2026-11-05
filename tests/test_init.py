@@ -10,6 +10,7 @@ from custom_components.zenkit import (
     _register_devices,
     _set_unique_id,
     _update_list_devices,
+    async_migrate_entry,
     async_remove_config_entry_device,
 )
 from custom_components.zenkit.const import DOMAIN
@@ -211,3 +212,67 @@ async def test_device_of_renamed_list_is_renamed(hass):
     assert device.name == "Groceries"
     assert device.model == "project"
     assert device.name_by_user == "Mine"
+
+
+async def _migrate(hass, entry, entities):
+    """Register entities of the entry with their old unique ids and migrate."""
+    entry.add_to_hass(hass)
+    registry = er.async_get(hass)
+    for platform, unique_id in entities:
+        registry.async_get_or_create(
+            platform,
+            DOMAIN,
+            unique_id,
+            config_entry=entry,
+            suggested_object_id=unique_id,
+        )
+    assert await async_migrate_entry(hass, entry)
+    return registry
+
+
+async def test_migrates_list_unique_ids(hass):
+    entry = MockConfigEntry(domain=DOMAIN, entry_id="entry", version=2)
+    entities = [
+        ("todo", "list-uuid"),
+        ("calendar", "list-uuid"),
+        ("sensor", "list-uuid_open_entries"),
+        ("sensor", "entry_username"),
+        ("button", "entry_refresh"),
+    ]
+
+    registry = await _migrate(hass, entry, entities)
+
+    assert {
+        (e.domain, e.entity_id.split(".")[1], e.unique_id)
+        for e in er.async_entries_for_config_entry(registry, entry.entry_id)
+    } == {
+        ("todo", "list_uuid", "entry_list-uuid"),
+        ("calendar", "list_uuid", "entry_list-uuid"),
+        ("sensor", "list_uuid_open_entries", "entry_list-uuid_open_entries"),
+        ("sensor", "entry_username", "entry_username"),
+        ("button", "entry_refresh", "entry_refresh"),
+    }
+    assert (entry.version, entry.minor_version) == (2, 2)
+
+
+async def test_migrates_version_1_entry(hass):
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        entry_id="entry",
+        version=1,
+        minor_version=1,
+        data={"api_key": "key"},
+    )
+
+    registry = await _migrate(hass, entry, [("todo", "list-uuid")])
+
+    assert entry.data == {"token": "key"}
+    assert (entry.version, entry.minor_version) == (2, 2)
+    assert registry.async_get_entity_id("todo", DOMAIN, "entry_list-uuid")
+
+
+async def test_does_not_migrate_future_version(hass):
+    entry = MockConfigEntry(domain=DOMAIN, version=3)
+    entry.add_to_hass(hass)
+
+    assert not await async_migrate_entry(hass, entry)

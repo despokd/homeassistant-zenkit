@@ -8,7 +8,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_TOKEN, Platform
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.exceptions import ConfigEntryNotReady
-from homeassistant.helpers import device_registry as dr
+from homeassistant.helpers import device_registry as dr, entity_registry as er
 from homeassistant.helpers.translation import async_get_translations
 
 from .const import DOMAIN
@@ -182,27 +182,28 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     return unload_ok
 
 
-async def async_migrate_entry(hass, config_entry: ConfigEntry):
-    """Migrate old entry."""
+async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:
+    """Migrate old entry, see docs/technical/config-entry-versions.md."""
     _LOGGER.debug(
         "Migrating configuration from version %s.%s",
         config_entry.version,
         config_entry.minor_version,
     )
 
-    if config_entry.version > 1:
+    if config_entry.version > 2:
         # This means the user has downgraded from a future version
         return False
 
-    if config_entry.version == 1:
+    new_data = {**config_entry.data}
+    if config_entry.version == 1 and config_entry.minor_version < 2:
+        new_data["token"] = new_data.pop("api_key")
 
-        new_data = {**config_entry.data}
-        if config_entry.minor_version < 2:
-            new_data["token"] = new_data.pop("api_key")
+    if config_entry.version == 1 or config_entry.minor_version < 2:
+        await _async_migrate_list_unique_ids(hass, config_entry)
 
-        hass.config_entries.async_update_entry(
-            config_entry, data=new_data, minor_version=3, version=1
-        )
+    hass.config_entries.async_update_entry(
+        config_entry, data=new_data, version=2, minor_version=2
+    )
 
     _LOGGER.debug(
         "Migration to configuration version %s.%s successful",
@@ -211,3 +212,22 @@ async def async_migrate_entry(hass, config_entry: ConfigEntry):
     )
 
     return True
+
+
+async def _async_migrate_list_unique_ids(
+    hass: HomeAssistant, config_entry: ConfigEntry
+) -> None:
+    """Scope the unique ids of list entities to the entry (#33).
+
+    They used the list uuid, which is the same for all accounts sharing a
+    workspace. Account entities already start with the entry id.
+    """
+    prefix = f"{config_entry.entry_id}_"
+
+    @callback
+    def migrate(entity: er.RegistryEntry) -> dict[str, str] | None:
+        if entity.unique_id.startswith(prefix):
+            return None
+        return {"new_unique_id": prefix + entity.unique_id}
+
+    await er.async_migrate_entries(hass, config_entry.entry_id, migrate)
