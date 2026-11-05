@@ -1,11 +1,18 @@
 """Tests for the Zenkit api client."""
 
 import datetime
-from unittest.mock import MagicMock, patch
+import re
+from dataclasses import dataclass
+from typing import Any
+from unittest.mock import patch
 
+import aiohttp
 import pytest
 from homeassistant.exceptions import ServiceValidationError
-from requests.exceptions import RequestException
+from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from pytest_homeassistant_custom_component.test_util.aiohttp import (
+    AiohttpClientMockResponse,
+)
 
 from custom_components.zenkit.api import Zenkit, user_image_url
 from custom_components.zenkit.exceptions import (
@@ -53,121 +60,169 @@ ELEMENTS = [
 ]
 
 
+@dataclass
+class Reply:
+    """A response of the fake API, or a connection error to raise."""
+
+    json: Any = None
+    status: int = 200
+    text: str | None = None
+    exc: Exception | None = None
+
+
 def _response(json, status_code=200):
-    response = MagicMock(status_code=status_code)
-    response.json.return_value = json
-    return response
+    return Reply(json=json, status=status_code)
+
+
+class FakeApi:
+    """Zenkit API on aioclient_mock.
+
+    Each method answers with a function of the URL, or a list of replies in order
+    (the last one repeats). By default GET returns the entry or the elements, and
+    writes succeed.
+    """
+
+    def __init__(self, hass, aioclient_mock) -> None:
+        self._mock = aioclient_mock
+        self.session = async_get_clientsession(hass)
+        self.elements = ELEMENTS
+        self.get = lambda url: _response(
+            self.elements if url.endswith("/elements") else ENTRY
+        )
+        self.post = [_response({})]
+        self.put = [_response({})]
+        for method in ("get", "post", "put"):
+            aioclient_mock.request(method, re.compile("."), side_effect=self._reply)
+
+    async def _reply(self, method, url, data):
+        handler = getattr(self, method.lower())
+        if callable(handler):
+            reply = handler(str(url))
+        else:
+            reply = handler.pop(0) if len(handler) > 1 else handler[0]
+        return AiohttpClientMockResponse(
+            method,
+            url,
+            status=reply.status,
+            json=reply.json,
+            text=reply.text,
+            exc=reply.exc,
+        )
+
+    def calls(self, method: str) -> list[tuple[str, Any]]:
+        """URLs and JSON bodies of the requests sent with a method."""
+        return [
+            (str(url), data)
+            for m, url, data, _ in self._mock.mock_calls
+            if m.upper() == method
+        ]
+
+    def zenkit(self) -> Zenkit:
+        return Zenkit(self.session, "key")
 
 
 @pytest.fixture
-def requests_mock():
-    """Mock requests: GET returns the entry or elements, PUT succeeds."""
-    with patch("custom_components.zenkit.api.requests") as requests:
-        requests.elements = ELEMENTS
-        requests.get.side_effect = lambda url, **kwargs: _response(
-            requests.elements if url.endswith("/elements") else ENTRY
-        )
-        requests.put.return_value = _response({})
-        requests.post.return_value = _response({})
-        yield requests
+def api(hass, aioclient_mock):
+    """Mock the Zenkit API."""
+    return FakeApi(hass, aioclient_mock)
 
 
-def _put_body(requests_mock):
-    assert requests_mock.put.call_count == 1
-    return requests_mock.put.call_args.kwargs["json"]
+def _put_body(api):
+    (call,) = api.calls("PUT")
+    return call[1]
 
 
-def _post_body(requests_mock):
-    assert requests_mock.post.call_count == 1
-    return requests_mock.post.call_args.kwargs["json"]
+def _post_body(api):
+    (call,) = api.calls("POST")
+    return call[1]
 
 
-async def test_update_name(requests_mock):
-    await Zenkit("key").update_entry("list", "entry-uuid", name="Buy oat milk")
+async def test_update_name(api):
+    await api.zenkit().update_entry("list", "entry-uuid", name="Buy oat milk")
 
-    assert _put_body(requests_mock) == {f"{TITLE}_text": "Buy oat milk"}
+    assert _put_body(api) == {f"{TITLE}_text": "Buy oat milk"}
 
 
 @pytest.mark.parametrize(
     ("completed", "option_id"), [(True, DONE_ID), (False, TODO_ID)]
 )
-async def test_update_completed(requests_mock, completed, option_id):
-    await Zenkit("key").update_entry("list", "entry-uuid", completed=completed)
+async def test_update_completed(api, completed, option_id):
+    await api.zenkit().update_entry("list", "entry-uuid", completed=completed)
 
-    assert _put_body(requests_mock) == {f"{STAGE}_categories": [option_id]}
+    assert _put_body(api) == {f"{STAGE}_categories": [option_id]}
 
 
-async def test_update_name_and_completed_in_one_request(requests_mock):
-    await Zenkit("key").update_entry(
+async def test_update_name_and_completed_in_one_request(api):
+    await api.zenkit().update_entry(
         "list", "entry-uuid", name="Buy oat milk", completed=True
     )
 
-    assert _put_body(requests_mock) == {
+    assert _put_body(api) == {
         f"{TITLE}_text": "Buy oat milk",
         f"{STAGE}_categories": [DONE_ID],
     }
 
 
-async def test_update_completed_without_roles_uses_color(requests_mock):
-    requests_mock.elements = [
+async def test_update_completed_without_roles_uses_color(api):
+    api.elements = [
         _element(None, [_option(7, None, "#0089d1"), _option(8, None, "#3ba744")])
     ]
 
-    await Zenkit("key").update_entry("list", "entry-uuid", completed=True)
+    await api.zenkit().update_entry("list", "entry-uuid", completed=True)
 
-    assert _put_body(requests_mock) == {f"{STAGE}_categories": [8]}
-
-
-async def test_update_open_without_todo_option_clears_status(requests_mock):
-    requests_mock.elements = [_element("stage", [_option(DONE_ID, "done", "#3ba744")])]
-
-    await Zenkit("key").update_entry("list", "entry-uuid", completed=False)
-
-    assert _put_body(requests_mock) == {f"{STAGE}_categories": []}
+    assert _put_body(api) == {f"{STAGE}_categories": [8]}
 
 
-async def test_update_completed_without_status_field_fails(requests_mock):
-    requests_mock.elements = [_element("title", [], category=1, uuid=TITLE)]
+async def test_update_open_without_todo_option_clears_status(api):
+    api.elements = [_element("stage", [_option(DONE_ID, "done", "#3ba744")])]
+
+    await api.zenkit().update_entry("list", "entry-uuid", completed=False)
+
+    assert _put_body(api) == {f"{STAGE}_categories": []}
+
+
+async def test_update_completed_without_status_field_fails(api):
+    api.elements = [_element("title", [], category=1, uuid=TITLE)]
 
     with pytest.raises(UpdateFailedException):
-        await Zenkit("key").update_entry("list", "entry-uuid", completed=True)
-    requests_mock.put.assert_not_called()
+        await api.zenkit().update_entry("list", "entry-uuid", completed=True)
+    assert not api.calls("PUT")
 
 
-async def test_update_unsupported_field_fails(requests_mock):
+async def test_update_unsupported_field_fails(api):
     with pytest.raises(NotImplementedError):
-        await Zenkit("key").update_entry("list", "entry-uuid", priority="high")
-    requests_mock.put.assert_not_called()
+        await api.zenkit().update_entry("list", "entry-uuid", priority="high")
+    assert not api.calls("PUT")
 
 
 @pytest.mark.parametrize(
     ("description", "value"), [("2 liters\noat", "2 liters\noat"), (None, None)]
 )
-async def test_update_description(requests_mock, description, value):
-    await Zenkit("key").update_entry("list", "entry-uuid", description=description)
+async def test_update_description(api, description, value):
+    await api.zenkit().update_entry("list", "entry-uuid", description=description)
 
-    assert _put_body(requests_mock) == {f"{NOTES}_text": value}
+    assert _put_body(api) == {f"{NOTES}_text": value}
 
 
 async def test_update_description_without_roles_uses_first_other_text_field(
-    requests_mock,
+    api,
 ):
-    requests_mock.elements = [
+    api.elements = [
         _element(None, [], category=1, uuid=TITLE, primary=True),
         _element(None, [], category=1, uuid=NOTES),
     ]
 
-    await Zenkit("key").update_entry("list", "entry-uuid", description="2 liters")
+    await api.zenkit().update_entry("list", "entry-uuid", description="2 liters")
 
-    assert _put_body(requests_mock) == {f"{NOTES}_text": "2 liters"}
+    assert _put_body(api) == {f"{NOTES}_text": "2 liters"}
 
 
-async def test_update_description_without_text_field_fails(requests_mock):
-    requests_mock.elements = [_element("title", [], category=1, uuid=TITLE)]
+async def test_update_description_without_text_field_fails(api):
+    api.elements = [_element("title", [], category=1, uuid=TITLE)]
 
     with pytest.raises(UpdateFailedException):
-        await Zenkit("key").update_entry("list", "entry-uuid", description="2 liters")
-    requests_mock.put.assert_not_called()
+        await api.zenkit().update_entry("list", "entry-uuid", description="2 liters")
+    assert not api.calls("PUT")
 
 
 @pytest.mark.parametrize(
@@ -188,32 +243,32 @@ async def test_update_description_without_text_field_fails(requests_mock):
         (None, {"_date": None, "_hasTime": False}),
     ],
 )
-async def test_update_due(requests_mock, due, fields):
-    await Zenkit("key").update_entry("list", "entry-uuid", due=due)
+async def test_update_due(api, due, fields):
+    await api.zenkit().update_entry("list", "entry-uuid", due=due)
 
-    assert _put_body(requests_mock) == {f"{DUE}{k}": v for k, v in fields.items()}
+    assert _put_body(api) == {f"{DUE}{k}": v for k, v in fields.items()}
 
 
-async def test_update_due_without_date_field_fails(requests_mock):
-    requests_mock.elements = [_element("title", [], category=1, uuid=TITLE)]
+async def test_update_due_without_date_field_fails(api):
+    api.elements = [_element("title", [], category=1, uuid=TITLE)]
 
     with pytest.raises(UpdateFailedException):
-        await Zenkit("key").update_entry(
+        await api.zenkit().update_entry(
             "list", "entry-uuid", due=datetime.date(2026, 11, 3)
         )
-    requests_mock.put.assert_not_called()
+    assert not api.calls("PUT")
 
 
-async def test_update_caches_elements(requests_mock):
-    zk = Zenkit("key")
+async def test_update_caches_elements(api):
+    zk = api.zenkit()
 
     await zk.update_entry("list", "entry-uuid", name="Buy oat milk")
 
     assert zk.elements == {"list": ELEMENTS}
 
 
-async def test_create_entry_with_fields_in_one_request(requests_mock):
-    await Zenkit("key").create_entry(
+async def test_create_entry_with_fields_in_one_request(api):
+    await api.zenkit().create_entry(
         "list",
         "entry-uuid",
         name="Buy milk",
@@ -221,14 +276,14 @@ async def test_create_entry_with_fields_in_one_request(requests_mock):
         due=datetime.date(2026, 11, 3),
     )
 
-    assert _post_body(requests_mock) == {
+    assert _post_body(api) == {
         "uuid": "entry-uuid",
         f"{TITLE}_text": "Buy milk",
         f"{NOTES}_text": "2 liters",
         f"{DUE}_date": "2026-11-03",
         f"{DUE}_hasTime": False,
     }
-    requests_mock.put.assert_not_called()
+    assert not api.calls("PUT")
 
 
 def _page(entries, total):
@@ -236,11 +291,7 @@ def _page(entries, total):
 
 
 def _error_response(status_code, text):
-    response = _response(None, status_code)
-    response.json.side_effect = ValueError("Expecting value")
-    response.reason = "Error"
-    response.text = text
-    return response
+    return Reply(status=status_code, text=text)
 
 
 @pytest.fixture
@@ -249,85 +300,86 @@ def no_sleep():
         yield sleep
 
 
-async def test_get_list_entries_merges_pages(requests_mock):
-    requests_mock.post.side_effect = [
+async def test_get_list_entries_merges_pages(api):
+    api.post = [
         _page([{"id": i} for i in range(100)], 150),
         _page([{"id": i} for i in range(100, 150)], 150),
     ]
 
-    entries = await Zenkit("key").get_list_entries("list")
+    entries = await api.zenkit().get_list_entries("list")
 
     assert entries == [{"id": i} for i in range(150)]
-    skips = [c.kwargs["json"]["skip"] for c in requests_mock.post.call_args_list]
+    skips = [body["skip"] for _, body in api.calls("POST")]
     assert skips == [0, 100]
 
 
-async def test_get_list_entries_empty_list(requests_mock):
-    requests_mock.post.return_value = _page(None, 0)
+async def test_get_list_entries_empty_list(api):
+    api.post = [_page(None, 0)]
 
-    assert await Zenkit("key").get_list_entries("list") == []
+    assert await api.zenkit().get_list_entries("list") == []
 
 
-async def test_get_list_entries_retries_failed_page(requests_mock, no_sleep):
-    requests_mock.post.side_effect = [
+async def test_get_list_entries_retries_failed_page(api, no_sleep):
+    api.post = [
         _page([{"id": i} for i in range(100)], 101),
         _error_response(502, "<html>Bad Gateway</html>"),
         _error_response(200, ""),
         _page([{"id": 100}], 101),
     ]
 
-    entries = await Zenkit("key").get_list_entries("list")
+    entries = await api.zenkit().get_list_entries("list")
 
     assert len(entries) == 101
     assert [c.args[0] for c in no_sleep.call_args_list] == [1, 3]
 
 
-async def test_get_list_entries_fails_after_retries(requests_mock, no_sleep, caplog):
-    requests_mock.post.return_value = _error_response(503, "<html>down</html>")
+async def test_get_list_entries_fails_after_retries(api, no_sleep, caplog):
+    api.post = [_error_response(503, "<html>down</html>")]
 
     with pytest.raises(UpdateFailedException):
-        await Zenkit("key").get_list_entries("list")
+        await api.zenkit().get_list_entries("list")
 
-    assert requests_mock.post.call_count == 3
-    assert "HTTP 503 Error: <html>down</html>" in caplog.text
+    assert len(api.calls("POST")) == 3
+    assert "HTTP 503: <html>down</html>" in caplog.text
 
 
-async def test_get_list_entries_client_error_is_not_retried(requests_mock, no_sleep):
-    requests_mock.post.return_value = _error_response(404, "not found")
+async def test_get_list_entries_client_error_is_not_retried(api, no_sleep):
+    api.post = [_error_response(404, "not found")]
 
     with pytest.raises(UpdateFailedException):
-        await Zenkit("key").get_list_entries("list")
+        await api.zenkit().get_list_entries("list")
 
-    assert requests_mock.post.call_count == 1
+    assert len(api.calls("POST")) == 1
     no_sleep.assert_not_called()
 
 
-async def test_get_list_entries_retries_connection_error(requests_mock, no_sleep):
-    from requests.exceptions import ConnectionError
+@pytest.mark.parametrize(
+    "error", [aiohttp.ClientConnectionError("reset"), TimeoutError()]
+)
+async def test_get_list_entries_retries_connection_error(api, no_sleep, error):
+    api.post = [Reply(exc=error), _page([{"id": 1}], 1)]
 
-    requests_mock.post.side_effect = [ConnectionError("reset"), _page([{"id": 1}], 1)]
-
-    assert await Zenkit("key").get_list_entries("list") == [{"id": 1}]
-
-
-def _filter(requests_mock):
-    return requests_mock.post.call_args.kwargs["json"]["filter"]
+    assert await api.zenkit().get_list_entries("list") == [{"id": 1}]
 
 
-async def test_get_list_entries_unfiltered_without_fields(requests_mock):
-    requests_mock.post.return_value = _page([{"id": 1}], 1)
-
-    await Zenkit("key").get_list_entries("list")
-
-    assert _filter(requests_mock) == {}
+def _filter(api):
+    return api.calls("POST")[-1][1]["filter"]
 
 
-async def test_get_list_entries_leaves_out_completed(requests_mock):
-    requests_mock.post.side_effect = [
+async def test_get_list_entries_unfiltered_without_fields(api):
+    api.post = [_page([{"id": 1}], 1)]
+
+    await api.zenkit().get_list_entries("list")
+
+    assert _filter(api) == {}
+
+
+async def test_get_list_entries_leaves_out_completed(api):
+    api.post = [
         _page([{"id": i} for i in range(100)], 101),
         _page([{"id": 100}], 101),
     ]
-    zk = Zenkit("key")
+    zk = api.zenkit()
     zk.elements["list"] = [*ELEMENTS[:3], {**ELEMENTS[3], "id": 7}]
 
     await zk.get_list_entries("list")
@@ -344,33 +396,33 @@ async def test_get_list_entries_leaves_out_completed(requests_mock):
             ]
         }
     }
-    filters = [c.kwargs["json"]["filter"] for c in requests_mock.post.call_args_list]
+    filters = [body["filter"] for _, body in api.calls("POST")]
     assert filters == [expected, expected]
 
 
-async def test_get_list_entries_filters_status_found_by_color(requests_mock):
-    requests_mock.post.return_value = _page([], 0)
-    zk = Zenkit("key")
+async def test_get_list_entries_filters_status_found_by_color(api):
+    api.post = [_page([], 0)]
+    zk = api.zenkit()
     zk.elements["list"] = [
         {**_element(None, [_option(DONE_ID, None, "#3ba744")]), "id": 8}
     ]
 
     await zk.get_list_entries("list")
 
-    term = _filter(requests_mock)["AND"]["TERMS"][0]
+    term = _filter(api)["AND"]["TERMS"][0]
     assert (term["elementId"], term["filterCategories"]) == (8, [DONE_ID])
 
 
-async def test_get_list_entries_unfiltered_without_done_option(requests_mock):
-    requests_mock.post.return_value = _page([], 0)
-    zk = Zenkit("key")
+async def test_get_list_entries_unfiltered_without_done_option(api):
+    api.post = [_page([], 0)]
+    zk = api.zenkit()
     zk.elements["list"] = [
         {**_element("stage", [_option(TODO_ID, "todo", "#0089d1")]), "id": 9}
     ]
 
     await zk.get_list_entries("list")
 
-    assert _filter(requests_mock) == {}
+    assert _filter(api) == {}
 
 
 @pytest.fixture
@@ -378,71 +430,64 @@ def user():
     return {"id": 1, "username": "user", "api_key": "key"}
 
 
-async def test_login_returns_user(requests_mock, user):
-    requests_mock.get.side_effect = None
-    requests_mock.get.return_value = _response(user)
+async def test_login_returns_user(api, user):
+    api.get = lambda url: _response(user)
 
-    assert await Zenkit("key").login() == user
+    assert await api.zenkit().login() == user
 
 
-async def test_login_invalid_key(requests_mock):
-    requests_mock.get.side_effect = None
-    requests_mock.get.return_value = _response({"error": {}}, status_code=401)
+async def test_login_invalid_key(api):
+    api.get = lambda url: _response({"error": {}}, status_code=401)
 
     with pytest.raises(CannotLoginException):
-        await Zenkit("key").login()
+        await api.zenkit().login()
 
 
-async def test_login_server_error(requests_mock):
-    requests_mock.get.side_effect = None
-    requests_mock.get.return_value = _response(None, status_code=502)
-
-    with pytest.raises(CannotConnectException):
-        await Zenkit("key").login()
-
-
-async def test_login_network_error(requests_mock):
-    requests_mock.get.side_effect = RequestException("offline")
+async def test_login_server_error(api):
+    api.get = lambda url: _response(None, status_code=502)
 
     with pytest.raises(CannotConnectException):
-        await Zenkit("key").login()
+        await api.zenkit().login()
 
 
-async def test_unread_notifications_count(requests_mock):
-    requests_mock.get.side_effect = None
-    requests_mock.get.return_value = _response(
+async def test_login_network_error(api):
+    api.get = lambda url: Reply(exc=aiohttp.ClientConnectionError("offline"))
+
+    with pytest.raises(CannotConnectException):
+        await api.zenkit().login()
+
+
+async def test_unread_notifications_count(api):
+    api.get = lambda url: _response(
         {"newNotificationsCount": 3, "thereAreMoreResults": True, "notifications": []}
     )
 
-    assert await Zenkit("key").get_unread_notifications_count() == 3
-    assert requests_mock.get.call_args.kwargs["params"] == {"limit": 1}
+    assert await api.zenkit().get_unread_notifications_count() == 3
+    assert api.calls("GET")[-1][0].endswith("/users/me/notifications?limit=1")
 
 
-async def test_unread_notifications_count_fails(requests_mock):
-    requests_mock.get.side_effect = None
-    requests_mock.get.return_value = _response({}, status_code=500)
+async def test_unread_notifications_count_fails(api):
+    api.get = lambda url: _response({}, status_code=500)
 
     with pytest.raises(UpdateFailedException):
-        await Zenkit("key").get_unread_notifications_count()
+        await api.zenkit().get_unread_notifications_count()
 
 
-async def test_get_organization(requests_mock):
-    requests_mock.get.side_effect = None
-    requests_mock.get.return_value = _response(
+async def test_get_organization(api):
+    api.get = lambda url: _response(
         {"myOrganizationId": 2, "organizations": [{"id": 1}, {"id": 2, "name": "B"}]}
     )
 
-    assert await Zenkit("key").get_organization(2) == {"id": 2, "name": "B"}
-    assert await Zenkit("key").get_organization(3) is None
-    assert requests_mock.get.call_args.args[0].endswith("/users/me/organizations")
+    assert await api.zenkit().get_organization(2) == {"id": 2, "name": "B"}
+    assert await api.zenkit().get_organization(3) is None
+    assert api.calls("GET")[-1][0].endswith("/users/me/organizations")
 
 
-async def test_get_organization_members_count(requests_mock):
-    requests_mock.get.side_effect = None
-    requests_mock.get.return_value = _response({"filteredTotal": 2, "users": []})
+async def test_get_organization_members_count(api):
+    api.get = lambda url: _response({"filteredTotal": 2, "users": []})
 
-    assert await Zenkit("key").get_organization_members_count(1) == 2
-    assert requests_mock.get.call_args.args[0].endswith("/organizations/1/users")
+    assert await api.zenkit().get_organization_members_count(1) == 2
+    assert api.calls("GET")[-1][0].endswith("/organizations/1/users")
 
 
 @pytest.mark.parametrize(
@@ -470,19 +515,19 @@ def _workspace(id, name, parent=None, lists=()):
     }
 
 
-def _workspaces(requests_mock, *workspaces):
-    requests_mock.get.side_effect = lambda url, **kwargs: _response(list(workspaces))
+def _workspaces(api, *workspaces):
+    api.get = lambda url: _response(list(workspaces))
 
 
-async def test_get_lists_adds_folders(requests_mock):
+async def test_get_lists_adds_folders(api):
     _workspaces(
-        requests_mock,
+        api,
         _workspace(1, "Home", lists=[10]),
         _workspace(2, "Garden", parent=1, lists=[20]),
         _workspace(3, "Beds", parent=2, lists=[30]),
     )
 
-    lists = await Zenkit("key").get_lists()
+    lists = await api.zenkit().get_lists()
 
     assert [list["id"] for list in lists] == [10, 20, 30]
     assert [list["_folder"] for list in lists] == [
@@ -502,23 +547,23 @@ async def test_get_lists_adds_folders(requests_mock):
     ]
 
 
-async def test_get_lists_unknown_parent_is_top_level(requests_mock):
-    _workspaces(requests_mock, _workspace(2, "Shared", parent=99, lists=[20]))
+async def test_get_lists_unknown_parent_is_top_level(api):
+    _workspaces(api, _workspace(2, "Shared", parent=99, lists=[20]))
 
-    lists = await Zenkit("key").get_lists()
+    lists = await api.zenkit().get_lists()
 
     assert lists[0]["_folder"]["workspace"] == "Shared"
     assert lists[0]["_folder"]["folder_path"] == []
 
 
-async def test_get_lists_parent_cycle_stops(requests_mock):
+async def test_get_lists_parent_cycle_stops(api):
     _workspaces(
-        requests_mock,
+        api,
         _workspace(1, "A", parent=2, lists=[10]),
         _workspace(2, "B", parent=1),
     )
 
-    lists = await Zenkit("key").get_lists()
+    lists = await api.zenkit().get_lists()
 
     assert lists[0]["_folder"] == {
         "workspace": "B",
@@ -541,9 +586,9 @@ def _named(id, name, role=None):
 
 
 @pytest.fixture
-def full_list(requests_mock):
+def full_list(api):
     """A list with named status and label options, an assignees field and members."""
-    requests_mock.elements = [
+    api.elements = [
         _element("title", [], category=1, uuid=TITLE, primary=True),
         {
             **_element(
@@ -559,14 +604,12 @@ def full_list(requests_mock):
         },
         {**_element("assignments", [], category=14), "uuid": ASSIGNEES},
     ]
-    requests_mock.get.side_effect = lambda url, **kwargs: _response(
-        USERS if url.endswith("/users") else requests_mock.elements
-    )
-    return requests_mock
+    api.get = lambda url: _response(USERS if url.endswith("/users") else api.elements)
+    return api
 
 
 async def test_create_entry_with_status_labels_and_assignees(full_list):
-    await Zenkit("key").create_entry(
+    await full_list.zenkit().create_entry(
         "list",
         "entry-uuid",
         name="Buy milk",
@@ -582,15 +625,13 @@ async def test_create_entry_with_status_labels_and_assignees(full_list):
         f"{LABELS}_categories": [5, 6],
         f"{ASSIGNEES}_persons": [7, 8, 7],
     }
-    assert full_list.get.call_args_list[-1].args[0].endswith("/lists/list/users")
+    assert full_list.calls("GET")[-1][0].endswith("/lists/list/users")
 
 
 async def test_create_entry_without_assignees_fetches_no_users(full_list):
-    await Zenkit("key").create_entry("list", "entry-uuid", name="Buy milk")
+    await full_list.zenkit().create_entry("list", "entry-uuid", name="Buy milk")
 
-    assert not any(
-        call.args[0].endswith("/users") for call in full_list.get.call_args_list
-    )
+    assert not any(url.endswith("/users") for url, _ in full_list.calls("GET"))
 
 
 @pytest.mark.parametrize(
@@ -617,41 +658,41 @@ async def test_create_entry_with_unknown_value_fails(
     full_list, kwargs, key, placeholders
 ):
     with pytest.raises(ServiceValidationError) as error:
-        await Zenkit("key").create_entry("list", "entry-uuid", name="x", **kwargs)
+        await full_list.zenkit().create_entry("list", "entry-uuid", name="x", **kwargs)
 
     assert error.value.translation_key == key
     assert error.value.translation_placeholders == placeholders
-    full_list.post.assert_not_called()
+    assert not full_list.calls("POST")
 
 
 @pytest.mark.parametrize(
     ("kwargs", "field"),
     [({"labels": ["Important"]}, "labels"), ({"assignees": ["jane"]}, "assignees")],
 )
-async def test_create_entry_without_field_fails(requests_mock, kwargs, field):
+async def test_create_entry_without_field_fails(api, kwargs, field):
     with pytest.raises(ServiceValidationError) as error:
-        await Zenkit("key").create_entry("list", "entry-uuid", name="x", **kwargs)
+        await api.zenkit().create_entry("list", "entry-uuid", name="x", **kwargs)
 
     assert error.value.translation_key == "missing_field"
     assert error.value.translation_placeholders == {"field": field}
-    requests_mock.post.assert_not_called()
+    assert not api.calls("POST")
 
 
 async def test_update_status_by_name(full_list):
-    await Zenkit("key").update_entry("list", "entry-uuid", status="To do")
+    await full_list.zenkit().update_entry("list", "entry-uuid", status="To do")
 
     assert _put_body(full_list) == {f"{STAGE}_categories": [1]}
 
 
-async def test_create_entry_with_checklist(requests_mock):
-    await Zenkit("key").create_entry(
+async def test_create_entry_with_checklist(api):
+    await api.zenkit().create_entry(
         "list",
         "entry-uuid",
         checklist={"name": "Packing", "items": ["Passport", "Charger"]},
         name="Trip",
     )
 
-    body = _post_body(requests_mock)
+    body = _post_body(api)
     (checklist,) = body.pop("checklists")
     assert body == {"uuid": "entry-uuid", f"{TITLE}_text": "Trip"}
     assert checklist.pop("uuid")
@@ -665,6 +706,6 @@ async def test_create_entry_with_checklist(requests_mock):
     }
 
 
-async def test_update_checklist_is_not_supported(requests_mock):
+async def test_update_checklist_is_not_supported(api):
     with pytest.raises(NotImplementedError):
-        await Zenkit("key").update_entry("list", "entry-uuid", checklist={})
+        await api.zenkit().update_entry("list", "entry-uuid", checklist={})

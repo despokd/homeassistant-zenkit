@@ -9,6 +9,7 @@ import voluptuous as vol
 
 from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
 from homeassistant.const import CONF_TOKEN
+from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .api import Zenkit
 from .const import DOMAIN
@@ -35,7 +36,7 @@ class ZenkitConfigFlow(ConfigFlow, domain=DOMAIN):
         """Handle the initial step."""
         errors: dict[str, str] = {}
         if user_input is not None:
-            zk = Zenkit(user_input[CONF_TOKEN])
+            zk = Zenkit(async_get_clientsession(self.hass), user_input[CONF_TOKEN])
             try:
                 user = await zk.login()
             except (TimeoutError, CannotConnectException):
