@@ -16,6 +16,7 @@ from homeassistant.components.sensor import (
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.components.todo import TodoItemStatus
@@ -45,6 +46,10 @@ class ZenkitSensorEntityDescription(SensorEntityDescription):
     ]
     attributes_fn: Callable[[ZenkitDataUpdateCoordinator], dict[str, Any]] | None = None
     picture_fn: Callable[[ZenkitDataUpdateCoordinator], str | None] | None = None
+    # The device, the account device if None
+    device_fn: Callable[[ZenkitDataUpdateCoordinator], DeviceInfo | None] = (
+        lambda coordinator: None
+    )
 
 
 def _user(coordinator: ZenkitDataUpdateCoordinator) -> dict:
@@ -55,6 +60,11 @@ def _user(coordinator: ZenkitDataUpdateCoordinator) -> dict:
 def _settings(coordinator: ZenkitDataUpdateCoordinator) -> dict:
     """The account settings, empty before they are known."""
     return _user(coordinator).get("settings") or {}
+
+
+def _organization_device(coordinator: ZenkitDataUpdateCoordinator) -> DeviceInfo | None:
+    """The organization device, None without organization."""
+    return coordinator.organization_device_info
 
 
 def _organization(coordinator: ZenkitDataUpdateCoordinator) -> dict:
@@ -277,6 +287,7 @@ SENSORS: tuple[ZenkitSensorEntityDescription, ...] = (
     ZenkitSensorEntityDescription(
         key="organization",
         translation_key="organization",
+        device_fn=_organization_device,
         icon="mdi:domain",
         entity_category=EntityCategory.DIAGNOSTIC,
         value_fn=lambda coordinator: _organization(coordinator).get("name"),
@@ -285,6 +296,7 @@ SENSORS: tuple[ZenkitSensorEntityDescription, ...] = (
     ZenkitSensorEntityDescription(
         key="organization_plan",
         translation_key="organization_plan",
+        device_fn=_organization_device,
         icon="mdi:card-account-details-star",
         entity_category=EntityCategory.DIAGNOSTIC,
         value_fn=lambda coordinator: _organization(coordinator).get("planId"),
@@ -292,6 +304,7 @@ SENSORS: tuple[ZenkitSensorEntityDescription, ...] = (
     ZenkitSensorEntityDescription(
         key="organization_members",
         translation_key="organization_members",
+        device_fn=_organization_device,
         icon="mdi:account-group",
         state_class=SensorStateClass.MEASUREMENT,
         entity_category=EntityCategory.DIAGNOSTIC,
@@ -300,6 +313,7 @@ SENSORS: tuple[ZenkitSensorEntityDescription, ...] = (
     ZenkitSensorEntityDescription(
         key="organization_quotas_exceeded",
         translation_key="organization_quotas_exceeded",
+        device_fn=_organization_device,
         icon="mdi:gauge-full",
         device_class=SensorDeviceClass.ENUM,
         options=["yes", "no"],
@@ -415,7 +429,9 @@ class ZenkitSensor(CoordinatorEntity[ZenkitDataUpdateCoordinator], SensorEntity)
         super().__init__(coordinator=coordinator)
         self.entity_description = description
         self._attr_unique_id = f"{entry_id}_{description.key}"
-        self._attr_device_info = coordinator.device_info
+        self._attr_device_info = (
+            description.device_fn(coordinator) or coordinator.device_info
+        )
         # Suggested id, else it is derived from the name in the HA language
         self.entity_id = f"sensor.{DOMAIN}_{description.key}"
 
@@ -461,9 +477,7 @@ class ZenkitListSensor(CoordinatorEntity[ZenkitDataUpdateCoordinator], SensorEnt
         self.entity_description = description
         self.list_short_id = list["shortId"]
         self._attr_unique_id = f"{list['uuid']}_{description.key}"
-        # Same device as the todo entity of the list
-        self._attr_device_info = coordinator.device_info
-        self._attr_translation_placeholders = {"list": list["name"]}
+        self._attr_device_info = coordinator.list_device_info(list)
         # Suggested id, else it is derived from the name in the HA language
         self.entity_id = f"sensor.{DOMAIN}_{slugify(list['name'])}_{description.key}"
 

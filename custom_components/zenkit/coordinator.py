@@ -14,13 +14,19 @@ from .const import DOMAIN, UPDATE_INTERVAL, USER_UPDATE_INTERVAL, ZENKIT_URL
 from .api import Zenkit
 
 _LOGGER = logging.getLogger(__name__)
+# Device model translation keys by list resourceType, others are "list"
+LIST_MODELS = {"taskList": "task_list", "project": "project", "database": "database"}
 
 
 class ZenkitDataUpdateCoordinator(DataUpdateCoordinator[dict]):
     """Class to manage fetching Zenkit data."""
 
     def __init__(
-        self, hass: HomeAssistant, zk: Zenkit, user: dict | None = None
+        self,
+        hass: HomeAssistant,
+        zk: Zenkit,
+        user: dict | None = None,
+        entry_id: str = "",
     ) -> None:
         """Initialize global Zenkit data updater."""
         super().__init__(
@@ -31,6 +37,12 @@ class ZenkitDataUpdateCoordinator(DataUpdateCoordinator[dict]):
             always_update=True,
         )
         self.zk = zk
+        # Scopes the device identifiers, two accounts may share a list (#33)
+        self.entry_id = entry_id
+        # Registered at setup, before the devices linked to it
+        self.account_device_id: str | None = None
+        # Translated device models by translation key, loaded at setup
+        self.models: dict[str, str] = {}
         self._lists: dict = None
         # Short ids of lists whose last fetch failed, their entities are unavailable
         self.failed_lists: set[str] = set()
@@ -112,18 +124,79 @@ class ZenkitDataUpdateCoordinator(DataUpdateCoordinator[dict]):
             self.unread_notifications = None
 
     @property
+    def account_identifier(self) -> tuple[str, str] | None:
+        """Device identifier of the account, None without user."""
+        if self.user is None:
+            return None
+        return (DOMAIN, f"{self.entry_id}_account_{self.user['id']}")
+
+    @property
     def device_info(self) -> DeviceInfo | None:
-        """The Zenkit account as a service device, all entities belong to it."""
+        """The Zenkit account as a service device with the account entities."""
         if self.user is None:
             return None
         return DeviceInfo(
-            identifiers={(DOMAIN, str(self.user["id"]))},
+            identifiers={self.account_identifier},
             name=self.user.get("displayname") or self.user["username"],
             manufacturer="Zenkit",
-            model="Zenkit To Do",
+            model=self._model("account"),
             entry_type=DeviceEntryType.SERVICE,
             configuration_url=ZENKIT_URL,
         )
+
+    @property
+    def organization_device_info(self) -> DeviceInfo | None:
+        """The organization of the account, None if the account has none."""
+        organization_id = (self.user or {}).get("organizationId")
+        if organization_id is None:
+            return None
+        name = (self.organization or {}).get("name")
+        return DeviceInfo(
+            identifiers={(DOMAIN, f"{self.entry_id}_organization_{organization_id}")},
+            # The organization may be unknown if its fetch failed at setup
+            name=name or None,
+            translation_key=None if name else "organization",
+            manufacturer="Zenkit",
+            model=self._model("organization"),
+            entry_type=DeviceEntryType.SERVICE,
+            configuration_url=ZENKIT_URL,
+            **self._via_account(),
+        )
+
+    def list_device_info(self, zenkit_list: dict) -> DeviceInfo:
+        """A Zenkit list with its todo, calendar and sensor entities."""
+        return DeviceInfo(
+            identifiers={(DOMAIN, f"{self.entry_id}_list_{zenkit_list['uuid']}")},
+            name=zenkit_list["name"],
+            manufacturer="Zenkit",
+            model=self._model(LIST_MODELS.get(zenkit_list.get("resourceType"), "list")),
+            # A device, not a service as the account, clears it on older devices
+            entry_type=None,
+            configuration_url=ZENKIT_URL,
+            **self._via_account(),
+        )
+
+    def _model(self, key: str) -> str:
+        """The translated device model, the key before translations are loaded."""
+        return self.models.get(key, key)
+
+    def _via_account(self) -> DeviceInfo:
+        """Link a device to the account device, once it is registered."""
+        if self.account_device_id is None:
+            return DeviceInfo()
+        return DeviceInfo(via_device_id=self.account_device_id)
+
+    @property
+    def device_identifiers(self) -> set[tuple[str, str]]:
+        """Identifiers of all current devices, others are stale."""
+        devices = [self.device_info, self.organization_device_info]
+        devices += [self.list_device_info(list) for list in self.lists]
+        return {
+            identifier
+            for device in devices
+            if device is not None
+            for identifier in device["identifiers"]
+        }
 
     async def async_refresh_list(self, list_short_id: str) -> None:
         """Fetch the entries of one list, e.g. after a write to it."""

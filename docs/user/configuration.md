@@ -33,7 +33,7 @@ Items are completed by the list's status field. Lists without one (or without a 
 
 ### Calendars
 
-Each list with a due date field also gets a read-only calendar entity, e.g. `calendar.jane_doe_groceries`. Its events are the open items with a due date:
+Each list with a due date field also gets a read-only calendar entity, e.g. `calendar.groceries` (calendars added before the list devices keep their id, e.g. `calendar.jane_doe_groceries`). Its events are the open items with a due date:
 
 - Items with a date only are all-day events, items with a time are events at that point in time (Zenkit stores the time in UTC, Home Assistant shows it in its time zone).
 - Items with a date range span from the start to the end date.
@@ -46,7 +46,7 @@ The calendar is `on` while an event is ongoing, which for all-day items is the w
 triggers:
   - trigger: calendar
     event: start
-    entity_id: calendar.jane_doe_groceries
+    entity_id: calendar.groceries
 ```
 
 Lists whose fields could not be loaded at setup get their calendar after a reload of the integration.
@@ -55,9 +55,19 @@ Lists whose fields could not be loaded at setup get their calendar after a reloa
 
 Data is polled every 60 seconds. Press the __Refresh Zenkit data__ button (`button.zenkit_refresh`) to update all lists immediately, e.g. after changing list fields in Zenkit. It can also be pressed from automations with the `button.press` action. New lists still require a reload of the integration.
 
-### Account device
+### Devices
 
-The integration adds one device per Zenkit account, named after your Zenkit display name. All lists, their calendars, the refresh button, the account and list sensors and the profile image belong to it. With the device, list names shown in Home Assistant get the device name as prefix, e.g. "Jane Doe Groceries". Entity ids of existing lists stay the same.
+The integration groups its entities into devices:
+
+| Device | Name | Model | Entities |
+| --- | --- | --- | --- |
+| Account (service) | Your Zenkit display name | Account | Account sensors, unread notifications, profile image, refresh button |
+| Organization (service) | Organization name | Organization | Organization, plan, members and quotas sensors |
+| One device per Zenkit list | List name | Its Zenkit type: To-do list, Project or Database | The todo list, its calendar and its count sensors |
+
+The integration page shows the account and organization under services and the lists under devices. List and organization devices are linked to the account device ("Connected via"). Models are in the language of Home Assistant at setup. The todo list and calendar are named after their list device, the count sensors are e.g. "Groceries Open entries".
+
+Installs from before the grouping keep their device, with its area and name, as the account device. Entity ids stay the same. Lists are loaded at setup: new lists and projects get their device after a reload of the integration (Settings > Devices & services > Zenkit > ⋮ > Reload) or a restart of Home Assistant. Devices of lists deleted in Zenkit can be deleted on their device page after a reload.
 
 Each Zenkit account can only be added once.
 
@@ -108,7 +118,7 @@ Each list gets sensors counting its open items, with the same status and due dat
 | `sensor.zenkit_<list>_overdue_entries` | Open items due before now. Items with only a date are overdue from the next day |
 | `sensor.zenkit_<list>_entries_due_today` | Open items due today, including ones due earlier today |
 
-Lists without a due date field only get the open count. The counts update with each poll, and a list that fails to load makes its sensors unavailable. They belong to the account device.
+Lists without a due date field only get the open count. The counts update with each poll, and a list that fails to load makes its sensors unavailable. They belong to the device of their list.
 
 ### Diagnostics
 

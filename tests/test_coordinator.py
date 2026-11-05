@@ -44,7 +44,7 @@ def coordinator(hass, entries):
     zk.login = AsyncMock(return_value=USER)
     zk.get_organization = AsyncMock(return_value=ORGANIZATION)
     zk.get_organization_members_count = AsyncMock(return_value=2)
-    return ZenkitDataUpdateCoordinator(hass, zk, USER)
+    return ZenkitDataUpdateCoordinator(hass, zk, USER, "entry")
 
 
 async def test_update_fetches_all_lists(coordinator):
@@ -135,9 +135,69 @@ async def test_failing_notifications_do_not_fail_update(coordinator):
 def test_device_info_is_the_account(coordinator):
     info = coordinator.device_info
 
-    assert info["identifiers"] == {(DOMAIN, "906842")}
+    assert info["identifiers"] == {(DOMAIN, "entry_account_906842")}
     assert info["name"] == "User Name"
+    assert info["model"] == "account"
     assert info["entry_type"] == DeviceEntryType.SERVICE
+
+
+def test_device_models_are_translated(coordinator):
+    coordinator.models = {"account": "Konto", "project": "Projekt", "list": "Liste"}
+    project = {"uuid": "u", "shortId": "a", "name": "A", "resourceType": "project"}
+    unknown = {"uuid": "u", "shortId": "a", "name": "A", "resourceType": "other"}
+
+    assert coordinator.device_info["model"] == "Konto"
+    assert coordinator.list_device_info(project)["model"] == "Projekt"
+    assert coordinator.list_device_info(unknown)["model"] == "Liste"
+
+
+def test_organization_device_info(coordinator):
+    coordinator.account_device_id = "account-device"
+    coordinator.organization = {"name": "Org"}
+    info = coordinator.organization_device_info
+
+    assert info["identifiers"] == {(DOMAIN, "entry_organization_560986")}
+    assert info["name"] == "Org"
+    assert info["translation_key"] is None
+    assert info["via_device_id"] == "account-device"
+
+
+def test_unknown_organization_has_translated_name(coordinator):
+    info = coordinator.organization_device_info
+
+    assert info["name"] is None
+    assert info["translation_key"] == "organization"
+
+
+def test_no_organization_device_without_organization(coordinator):
+    coordinator.user = {"id": 1, "username": "user"}
+
+    assert coordinator.organization_device_info is None
+
+
+def test_list_device_info(coordinator):
+    coordinator.account_device_id = "account-device"
+    info = coordinator.list_device_info({"uuid": "u", "shortId": "a", "name": "A"})
+
+    assert info["identifiers"] == {(DOMAIN, "entry_list_u")}
+    assert info["name"] == "A"
+    assert info["model"] == "list"
+    # A device, the account and organization are services
+    assert info["entry_type"] is None
+    assert info["via_device_id"] == "account-device"
+
+
+def test_device_identifiers_scoped_to_entry(hass, coordinator):
+    coordinator._lists = [{"uuid": "u", "shortId": "a", "name": "A"}]
+    other = ZenkitDataUpdateCoordinator(hass, coordinator.zk, USER, "other")
+    other._lists = coordinator._lists
+
+    assert coordinator.device_identifiers == {
+        (DOMAIN, "entry_account_906842"),
+        (DOMAIN, "entry_organization_560986"),
+        (DOMAIN, "entry_list_u"),
+    }
+    assert not coordinator.device_identifiers & other.device_identifiers
 
 
 def test_device_info_falls_back_to_username(coordinator):
@@ -199,3 +259,9 @@ async def test_force_refresh_refetches_account(coordinator):
 
 def test_lists_before_fetch(hass):
     assert ZenkitDataUpdateCoordinator(hass, MagicMock()).lists == []
+
+
+def test_no_link_before_account_device_is_registered(coordinator):
+    info = coordinator.list_device_info({"uuid": "u", "shortId": "a", "name": "A"})
+
+    assert "via_device_id" not in info
