@@ -42,6 +42,34 @@ def stage_element(elements: list[dict]) -> dict | None:
     return None
 
 
+def labels_element(elements: list[dict]) -> dict | None:
+    """Get the labels (tags) element of a list."""
+    return _role_element(elements, "tags")
+
+
+def assignees_element(elements: list[dict]) -> dict | None:
+    """Get the assignees element of a list."""
+    return _role_element(elements, "assignments")
+
+
+def option_by_name(element: dict, name: str) -> dict | None:
+    """Get the option of a categories element by its name, ignoring case."""
+    wanted = name.strip().casefold()
+    return next(
+        (
+            option
+            for option in _status_options(element)
+            if (option.get("name") or "").strip().casefold() == wanted
+        ),
+        None,
+    )
+
+
+def option_names(element: dict) -> list[str]:
+    """Get the option names of a categories element."""
+    return [option.get("name") or "" for option in _status_options(element)]
+
+
 def subentries_element(elements: list[dict]) -> dict | None:
     """Get the sub-items element of a list."""
     return _role_element(elements, "subtasks") or _category_element(

@@ -4,6 +4,7 @@ import datetime
 from unittest.mock import MagicMock, patch
 
 import pytest
+from homeassistant.exceptions import ServiceValidationError
 from requests.exceptions import RequestException
 
 from custom_components.zenkit.api import Zenkit, user_image_url
@@ -462,3 +463,118 @@ async def test_get_lists_parent_cycle_stops(requests_mock):
         "folder_id": 1,
         "folder_path": ["A"],
     }
+
+
+LABELS = "labels-uuid"
+ASSIGNEES = "assignees-uuid"
+USERS = [
+    {"id": 7, "displayname": "Jane Doe", "fullname": "Jane Doe", "username": "jane"},
+    {"id": 8, "displayname": "John Roe", "fullname": "John Roe", "username": "john"},
+]
+
+
+def _named(id, name, role=None):
+    return {"id": id, "name": name, "resourceRole": role}
+
+
+@pytest.fixture
+def full_list(requests_mock):
+    """A list with named status and label options, an assignees field and members."""
+    requests_mock.elements = [
+        _element("title", [], category=1, uuid=TITLE, primary=True),
+        {
+            **_element(
+                "stage",
+                [_named(1, "To do", "todo"), _named(3, "In progress")],
+            ),
+            "name": "Phase",
+        },
+        {
+            **_element("tags", [_named(5, "Important"), _named(6, "Later")]),
+            "uuid": LABELS,
+            "name": "Tags",
+        },
+        {**_element("assignments", [], category=14), "uuid": ASSIGNEES},
+    ]
+    requests_mock.get.side_effect = lambda url, **kwargs: _response(
+        USERS if url.endswith("/users") else requests_mock.elements
+    )
+    return requests_mock
+
+
+async def test_create_entry_with_status_labels_and_assignees(full_list):
+    await Zenkit("key").create_entry(
+        "list",
+        "entry-uuid",
+        name="Buy milk",
+        status="in progress",
+        labels=["Important", " later "],
+        assignees=["Jane Doe", "john", "7"],
+    )
+
+    assert _post_body(full_list) == {
+        "uuid": "entry-uuid",
+        f"{TITLE}_text": "Buy milk",
+        f"{STAGE}_categories": [3],
+        f"{LABELS}_categories": [5, 6],
+        f"{ASSIGNEES}_persons": [7, 8, 7],
+    }
+    assert full_list.get.call_args_list[-1].args[0].endswith("/lists/list/users")
+
+
+async def test_create_entry_without_assignees_fetches_no_users(full_list):
+    await Zenkit("key").create_entry("list", "entry-uuid", name="Buy milk")
+
+    assert not any(
+        call.args[0].endswith("/users") for call in full_list.get.call_args_list
+    )
+
+
+@pytest.mark.parametrize(
+    ("kwargs", "key", "placeholders"),
+    [
+        (
+            {"status": "Blocked"},
+            "unknown_option",
+            {"field": "Phase", "value": "Blocked", "options": "To do, In progress"},
+        ),
+        (
+            {"labels": ["Important", "Urgent"]},
+            "unknown_option",
+            {"field": "Tags", "value": "Urgent", "options": "Important, Later"},
+        ),
+        (
+            {"assignees": ["Max"]},
+            "unknown_user",
+            {"value": "Max", "users": "Jane Doe, John Roe"},
+        ),
+    ],
+)
+async def test_create_entry_with_unknown_value_fails(
+    full_list, kwargs, key, placeholders
+):
+    with pytest.raises(ServiceValidationError) as error:
+        await Zenkit("key").create_entry("list", "entry-uuid", name="x", **kwargs)
+
+    assert error.value.translation_key == key
+    assert error.value.translation_placeholders == placeholders
+    full_list.post.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    ("kwargs", "field"),
+    [({"labels": ["Important"]}, "labels"), ({"assignees": ["jane"]}, "assignees")],
+)
+async def test_create_entry_without_field_fails(requests_mock, kwargs, field):
+    with pytest.raises(ServiceValidationError) as error:
+        await Zenkit("key").create_entry("list", "entry-uuid", name="x", **kwargs)
+
+    assert error.value.translation_key == "missing_field"
+    assert error.value.translation_placeholders == {"field": field}
+    requests_mock.post.assert_not_called()
+
+
+async def test_update_status_by_name(full_list):
+    await Zenkit("key").update_entry("list", "entry-uuid", status="To do")
+
+    assert _put_body(full_list) == {f"{STAGE}_categories": [1]}

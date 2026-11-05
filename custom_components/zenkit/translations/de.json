@@ -198,6 +198,51 @@
     "exceptions": {
         "no_status_field": {
             "message": "{list} hat kein Statusfeld, daher können Einträge nicht erledigt werden"
+        },
+        "missing_field": {
+            "message": "Die Liste hat kein Feld {field}"
+        },
+        "unknown_option": {
+            "message": "{field} hat keine Option „{value}“, verfügbar: {options}"
+        },
+        "unknown_user": {
+            "message": "„{value}“ ist kein Mitglied der Liste, Mitglieder: {users}"
+        }
+    },
+    "services": {
+        "create_entry": {
+            "name": "Eintrag erstellen",
+            "description": "Erstellt einen Eintrag in einer Zenkit-Liste, mit Feldern, die ein To-do-Element nicht hat.",
+            "fields": {
+                "name": {
+                    "name": "Name",
+                    "description": "Der Titel des Eintrags."
+                },
+                "description": {
+                    "name": "Beschreibung",
+                    "description": "Text für das Notizfeld der Liste."
+                },
+                "due_date": {
+                    "name": "Fälligkeitsdatum",
+                    "description": "Das Datum, an dem der Eintrag fällig ist."
+                },
+                "due_datetime": {
+                    "name": "Fälligkeitsdatum und -uhrzeit",
+                    "description": "Datum und Uhrzeit, an dem der Eintrag fällig ist."
+                },
+                "status": {
+                    "name": "Status",
+                    "description": "Name einer Statusoption der Liste, wie in Zenkit angezeigt."
+                },
+                "labels": {
+                    "name": "Labels",
+                    "description": "Namen von Tag-Optionen der Liste, wie in Zenkit angezeigt."
+                },
+                "assignees": {
+                    "name": "Zugewiesene",
+                    "description": "Namen oder Benutzernamen von Mitgliedern der Liste."
+                }
+            }
         }
     }
 }

@@ -420,3 +420,47 @@ def test_renamed_and_moved_list_is_updated(entity):
     assert entity.icon == "mdi:shopping-cart"
     assert entity.extra_state_attributes["workspace"] == "Home"
     assert entity.extra_state_attributes["icon_class"] == "fa-shopping-cart"
+
+
+async def test_create_entry_with_more_fields(entity):
+    response = await entity.async_create_entry(
+        name="Buy milk",
+        description="2 liters",
+        due_date=datetime.date(2026, 11, 3),
+        status="In progress",
+        labels=["Important"],
+        assignees=["Jane Doe"],
+    )
+
+    _, (list_short_id, uid), kwargs = entity.coordinator.zk.create_entry.mock_calls[0]
+    assert list_short_id == "list"
+    assert response == {"uid": uid}
+    assert kwargs == {
+        "name": "Buy milk",
+        "description": "2 liters",
+        "due": datetime.date(2026, 11, 3),
+        "status": "In progress",
+        "labels": ["Important"],
+        "assignees": ["Jane Doe"],
+    }
+    entity.coordinator.async_refresh_list.assert_awaited_once_with("list")
+
+
+async def test_create_entry_sends_only_name(entity):
+    await entity.async_create_entry(name="Buy milk", labels=[], assignees=[])
+
+    _, _, kwargs = entity.coordinator.zk.create_entry.mock_calls[0]
+    assert kwargs == {"name": "Buy milk"}
+
+
+async def test_create_entry_due_time_without_zone_is_local(hass, entity):
+    await hass.config.async_set_time_zone("Europe/Berlin")
+
+    await entity.async_create_entry(
+        name="Buy milk", due_datetime=datetime.datetime(2026, 11, 3, 18, 0)
+    )
+
+    _, _, kwargs = entity.coordinator.zk.create_entry.mock_calls[0]
+    assert kwargs["due"] == datetime.datetime(
+        2026, 11, 3, 17, 0, tzinfo=datetime.timezone.utc
+    )

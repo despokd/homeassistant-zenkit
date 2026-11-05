@@ -31,6 +31,36 @@ Example template: `{{ state_attr('todo.groceries', 'folder_path') | join(' / ') 
 
 Items are completed by the list's status field. Lists without one (or without a done status) show their items in a separate section with an indeterminate checkbox (neither checked nor unchecked). Clicking it changes nothing in Zenkit, but the card shows it ticked until the page is reloaded. Completing an item through an action shows an error. The entity state counts only open items, so it is `0` for these lists.
 
+### Create entry action
+
+`zenkit.create_entry` adds an item to the targeted Zenkit to-do lists, with fields `todo.add_item` doesn't have:
+
+| Field | Value |
+| --- | --- |
+| `name` | Title of the item (required) |
+| `description` | Text for the notes field |
+| `due_date` / `due_datetime` | Due date, or date and time. A time without time zone is in the time zone of Home Assistant |
+| `status` | Name of a status option, e.g. `In progress` |
+| `labels` | Names of tag options |
+| `assignees` | Display names or usernames of list members |
+
+Names are matched as shown in Zenkit, ignoring case. The options must exist in the list already, new labels can't be created. A name that matches no option or member, or a field the list doesn't have, fails with a message listing what is available. Lists of type to-do have no tags field, projects do.
+
+With `response_variable`, the action returns the `uid` of the new item per entity:
+
+```yaml
+actions:
+  - action: zenkit.create_entry
+    target:
+      entity_id: todo.groceries
+    data:
+      name: Buy milk
+      status: In progress
+      labels: [Important]
+      assignees: [Jane Doe]
+    response_variable: created
+```
+
 ### Calendars
 
 Each list with a due date field also gets a read-only calendar entity, e.g. `calendar.groceries` (calendars added before the list devices keep their id, e.g. `calendar.jane_doe_groceries`). Its events are the open items with a due date:

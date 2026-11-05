@@ -23,7 +23,7 @@ HA config entry (API key)
 - **Failures**: lists are fetched independently. A list whose entries can't be fetched is left out of the data and added to `coordinator.failed_lists`, so only its entity is unavailable; it is removed again on its next successful fetch. The update only fails (all entities unavailable) if every list fails.
 - **Writes**: entity create/update/delete call the api client, then `coordinator.async_refresh_list(shortId)`, which re-fetches only that list's entries. If that fetch fails, only that list goes unavailable until the next poll.
   - Every write fetches `/lists/{shortId}/elements` first, which also refreshes the cache, so renamed or added fields and options are picked up. Fields are picked as in [Entry → TodoItem mapping](todoitem-mapping.md).
-  - Create: `POST /lists/{shortId}/entries` with a new uuid and the fields (name, and description/due if set) in one request.
+  - Create: `POST /lists/{shortId}/entries` with a new uuid and the fields (name, and description/due if set) in one request. The `zenkit.create_entry` action also passes `status`, `labels` and `assignees` by name; they are resolved to option ids of the `stage`/`tags` elements and to user ids from `/lists/{shortId}/users` (fetched only when assignees are given). A name that matches nothing, or a missing element, raises `InvalidValueException` before anything is written.
   - Update: the entity compares the HA item with the coordinator data and passes only changed fields (`name`, `completed`, `description`, `due`). `update_entry` `PUT`s all changes in one request. See [Zenkit Todo](../zenkit/zenkit-todo.md#writing-entries).
   - Delete: resolves uuids to numeric ids, then deprecates them (`/entries/delete/filter`); Zenkit soft-deletes.
 

@@ -5,6 +5,7 @@ from pathlib import Path
 from unittest.mock import MagicMock
 
 import pytest
+import yaml
 
 from custom_components.zenkit.api import _folder
 from custom_components.zenkit.coordinator import LIST_MODELS
@@ -47,3 +48,14 @@ def test_device_models_have_translations(file):
     keys = {"account", "organization", "list", *LIST_MODELS.values()}
     missing = {key for key in keys if not device.get(key, {}).get("name")}
     assert not missing, f"{file}: device lacks {sorted(missing)}"
+
+
+@pytest.mark.parametrize("file", FILES)
+def test_services_have_translations(file):
+    services = yaml.safe_load((COMPONENT / "services.yaml").read_text())
+    translated = json.loads((COMPONENT / file).read_text()).get("services", {})
+    for service, definition in services.items():
+        assert translated.get(service, {}).get("name"), f"{file}: {service}"
+        fields = translated[service].get("fields", {})
+        for field in definition.get("fields", {}):
+            assert fields.get(field, {}).get("name"), f"{file}: {service}.{field}"
