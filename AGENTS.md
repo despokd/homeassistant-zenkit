@@ -15,7 +15,7 @@ Key facts:
 - Zenkit API quirks and undocumented behavior go in [docs/zenkit/](docs/zenkit/README.md).
 - docs have a README.md in each directory as starting point
 - Every entity attribute needs a translated name (`entity.<platform>.<translation_key>.state_attributes.<attribute>.name`) in `strings.json`, `translations/en.json` and `translations/de.json`. The entity needs a `translation_key` for this. `tests/test_translations.py` checks it.
-- `README.md` is the page shown in the HA Marketplace and HACS. Use absolute `raw.githubusercontent.com` URLs for images there (relative paths and `brands.home-assistant.io` don't work). When user-visible features change, update its feature and entity lists and `docs/user/`.
+- `README.md` is the page shown in the HA Marketplace and HACS. Use absolute `raw.githubusercontent.com` URLs for images there (relative paths and `brands.home-assistant.io` don't work).
 
 ## Resources
 
@@ -27,6 +27,8 @@ Key facts:
 Docker compose at `localhost:8123` with user `docker` password `docker`. Access via API. Zenkit API key will be added by user at HA.
 
 After changing code in `custom_components/zenkit/`, restart the local HA instance so it loads the mounted code (a config entry reload does not re-import changed modules): call the `homeassistant.restart` service via the HA API and wait until `/api/config` responds again. Note that HA keeps the entity ID of an entity it has seen before, so changed entity ID logic only shows for new entities.
+
+Before each commit, check `README.md` and `docs/` against the change: search them for the features, entities, attributes and terms it touches, until every statement about the changed behavior (including limitations, intervals, entity ids and devices) matches the code. User-facing behavior lives in `README.md` and `docs/user/`, internals in `docs/technical/`.
 
 Tests: `python3 -m venv .venv && .venv/bin/pip install -r requirements_test.txt`, then `.venv/bin/python -m pytest`. Formatting is checked with `black`.
 
