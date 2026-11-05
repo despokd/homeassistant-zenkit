@@ -296,6 +296,18 @@ def test_attributes():
     assert entity.extra_state_attributes == attributes
 
 
+def test_unique_id_is_scoped_to_the_entry():
+    """Accounts sharing a workspace see the same list uuid (#33)."""
+    entities = [
+        ZenkitTodoListEntity(
+            MagicMock(entry_id=entry_id), "1", "list", "list-uuid", "List"
+        )
+        for entry_id in ("a", "b")
+    ]
+
+    assert [entity.unique_id for entity in entities] == ["a_list-uuid", "b_list-uuid"]
+
+
 def test_list_attributes():
     list = {
         "description": "Weekly shopping",

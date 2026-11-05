@@ -57,7 +57,7 @@ def utc_time_zone():
 @pytest.fixture
 def coordinator():
     """Coordinator with known fields of the list."""
-    coordinator = MagicMock()
+    coordinator = MagicMock(entry_id="entry")
     coordinator.lists = [LIST]
     coordinator.get_list.return_value = LIST
     coordinator.zk.elements = {"list": ELEMENTS}
@@ -140,7 +140,7 @@ def test_next_event(entity):
 
 
 def test_appearance(entity):
-    assert entity.unique_id == "list-uuid"
+    assert entity.unique_id == "entry_list-uuid"
     # Named after the list device
     assert entity.name is None
     assert entity.device_info is entity.coordinator.list_device_info.return_value
@@ -175,7 +175,7 @@ async def test_only_lists_with_due_date_field(coordinator):
 
     await async_setup_entry(hass, MagicMock(entry_id="entry"), added.extend)
 
-    assert [entity.unique_id for entity in added] == ["list-uuid"]
+    assert [entity.unique_id for entity in added] == ["entry_list-uuid"]
 
 
 async def test_calendar_added_once_fields_are_known(coordinator):
@@ -188,7 +188,7 @@ async def test_calendar_added_once_fields_are_known(coordinator):
 
     coordinator.async_add_listener.call_args.args[0]()
 
-    assert [entity.unique_id for entity in added] == ["list-uuid"]
+    assert [entity.unique_id for entity in added] == ["entry_list-uuid"]
 
 
 async def test_icon_follows_list(entity, coordinator):

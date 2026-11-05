@@ -100,7 +100,7 @@ class ZenkitCalendarEntity(
         """Initialize the calendar of a list."""
         super().__init__(coordinator=coordinator)
         self.list_short_id = zenkit_list["shortId"]
-        self._attr_unique_id = zenkit_list["uuid"]
+        self._attr_unique_id = f"{coordinator.entry_id}_{zenkit_list['uuid']}"
         # The calendar of the list device, named after it
         self._attr_name = None
         self._attr_icon = _list_icon(zenkit_list)

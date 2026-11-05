@@ -276,7 +276,8 @@ class ZenkitTodoListEntity(
         self.list_uuid = list_uuid
         self.list_name = list_name
 
-        self._attr_unique_id = list_uuid
+        # Scoped to the entry, accounts sharing a workspace see the same list uuid
+        self._attr_unique_id = f"{coordinator.entry_id}_{list_uuid}"
         # The main entity of the list device, named after it
         self._attr_name = None
         self._attr_todo_items = None
