@@ -43,7 +43,9 @@ class ZenkitDataUpdateCoordinator(DataUpdateCoordinator[dict]):
         self.account_device_id: str | None = None
         # Translated device models by translation key, loaded at setup
         self.models: dict[str, str] = {}
-        self._lists: dict = None
+        # The lists, refetched with the account data, None until fetched once
+        self._lists: list[dict] | None = None
+        self._lists_updated: datetime | None = None
         # Short ids of lists whose last fetch failed, their entities are unavailable
         self.failed_lists: set[str] = set()
         # The account of the API key and its organization, from login, refreshed
@@ -58,34 +60,28 @@ class ZenkitDataUpdateCoordinator(DataUpdateCoordinator[dict]):
     async def _async_update_data(self) -> dict:
         """Fetch items from Zenkit."""
 
-        if self._lists is None:
-            try:
-                await self.async_get_lists()
-            except Exception as error:
-                raise UpdateFailed("Failed to fetch lists") from error
-            _LOGGER.debug("Lists were empty, fetched lists: %s", self._lists)
+        await self._async_fetch_lists()
 
         lists_entries = dict()
-        if self._lists is not None:
-            for list in self._lists:
-                list_shortId = list["shortId"]
-                if list_shortId not in self.zk.elements:
-                    # Entities fall back to heuristics until the fields are known
-                    try:
-                        await self.zk.get_list_elements(list_shortId)
-                    except Exception:
-                        _LOGGER.warning(
-                            "Failed to fetch fields for list %s (%s)",
-                            list["name"],
-                            list_shortId,
-                        )
-                # A failing list only makes its own entity unavailable
-                entries = await self._async_fetch_entries(list_shortId, list["name"])
-                if entries is not None:
-                    lists_entries[list_shortId] = entries
+        for list in self.lists:
+            list_shortId = list["shortId"]
+            if list_shortId not in self.zk.elements:
+                # Entities fall back to heuristics until the fields are known
+                try:
+                    await self.zk.get_list_elements(list_shortId)
+                except Exception:
+                    _LOGGER.warning(
+                        "Failed to fetch fields for list %s (%s)",
+                        list["name"],
+                        list_shortId,
+                    )
+            # A failing list only makes its own entity unavailable
+            entries = await self._async_fetch_entries(list_shortId, list["name"])
+            if entries is not None:
+                lists_entries[list_shortId] = entries
 
-            if self._lists and not lists_entries:
-                raise UpdateFailed("Failed to fetch entries of all lists")
+        if self.lists and not lists_entries:
+            raise UpdateFailed("Failed to fetch entries of all lists")
 
         if (
             self._account_updated is None
@@ -110,10 +106,47 @@ class ZenkitDataUpdateCoordinator(DataUpdateCoordinator[dict]):
             return
         self._account_updated = dt_util.utcnow()
 
+    async def _async_fetch_lists(self) -> None:
+        """Fetch the lists every USER_UPDATE_INTERVAL, keeps the known ones on error.
+
+        Entities and devices follow added, removed and renamed lists by listening
+        to the coordinator, see entity.async_add_list_entities.
+        """
+        if (
+            self._lists is not None
+            and self._lists_updated is not None
+            and dt_util.utcnow() - self._lists_updated
+            < timedelta(seconds=USER_UPDATE_INTERVAL)
+        ):
+            return
+        try:
+            lists = await self.zk.get_lists()
+        except Exception as error:
+            if self._lists is None:
+                raise UpdateFailed("Failed to fetch lists") from error
+            # Retried on the next poll
+            _LOGGER.warning("Failed to fetch lists: %s", error)
+            return
+        removed = {list["shortId"] for list in self._lists or []} - {
+            list["shortId"] for list in lists
+        }
+        for short_id in removed:
+            self.zk.elements.pop(short_id, None)
+            self.failed_lists.discard(short_id)
+        self._lists = lists
+        self._lists_updated = dt_util.utcnow()
+        _LOGGER.debug("Fetched %s lists", len(lists))
+
     @property
     def lists(self) -> list[dict]:
-        """The lists fetched at setup."""
+        """The lists of the last successful fetch."""
         return self._lists or []
+
+    def get_list(self, list_short_id: str) -> dict | None:
+        """The list with this short id, None if it was removed."""
+        return next(
+            (list for list in self.lists if list["shortId"] == list_short_id), None
+        )
 
     async def _async_fetch_unread_notifications(self) -> None:
         """Fetch the unread notification count, None on error."""
@@ -200,14 +233,7 @@ class ZenkitDataUpdateCoordinator(DataUpdateCoordinator[dict]):
 
     async def async_refresh_list(self, list_short_id: str) -> None:
         """Fetch the entries of one list, e.g. after a write to it."""
-        name = next(
-            (
-                list["name"]
-                for list in self._lists or []
-                if list["shortId"] == list_short_id
-            ),
-            list_short_id,
-        )
+        name = (self.get_list(list_short_id) or {}).get("name", list_short_id)
         entries = await self._async_fetch_entries(list_short_id, name)
         data = {
             short_id: list_entries
@@ -219,8 +245,9 @@ class ZenkitDataUpdateCoordinator(DataUpdateCoordinator[dict]):
         self.async_set_updated_data(data)
 
     async def async_force_refresh(self) -> None:
-        """Fetch all list fields and entries and the account now, bypassing caches."""
+        """Fetch the lists, their fields and entries and the account now."""
         self.zk.elements.clear()
+        self._lists_updated = None
         self._account_updated = None
         await self.async_refresh()
 
@@ -244,9 +271,3 @@ class ZenkitDataUpdateCoordinator(DataUpdateCoordinator[dict]):
             "Fetched %s entries for list %s (%s)", len(entries), name, list_short_id
         )
         return entries
-
-    async def async_get_lists(self) -> dict:
-        """Return lists from Zenkit fetched at most once."""
-        if self._lists is None:
-            self._lists = await self.zk.get_lists()
-        return self._lists

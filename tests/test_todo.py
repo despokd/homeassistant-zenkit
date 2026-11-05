@@ -56,6 +56,8 @@ def entity():
     coordinator.zk.create_entry = AsyncMock()
     coordinator.async_refresh_list = AsyncMock()
     coordinator.failed_lists = set()
+    # Removed lists keep their last known name and attributes
+    coordinator.get_list.return_value = None
     return ZenkitTodoListEntity(coordinator, "1", "list", "list-uuid", "List")
 
 
@@ -400,3 +402,21 @@ def test_item_details_attribute(entity):
     entry[f"{DEPENDENCIES}_references"] = []
     entity._handle_coordinator_update()
     assert entity.extra_state_attributes == {}
+
+
+def test_renamed_and_moved_list_is_updated(entity):
+    entity.hass = MagicMock()
+    entity.async_write_ha_state = MagicMock()
+    entity.coordinator.get_list.return_value = {
+        "shortId": "list",
+        "name": "Groceries",
+        "iconClassNames": "fa-shopping-cart",
+        "_folder": {"workspace": "Home", "folder": None},
+    }
+
+    entity._handle_coordinator_update()
+
+    assert entity.list_name == "Groceries"
+    assert entity.icon == "mdi:shopping-cart"
+    assert entity.extra_state_attributes["workspace"] == "Home"
+    assert entity.extra_state_attributes["icon_class"] == "fa-shopping-cart"

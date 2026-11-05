@@ -26,6 +26,7 @@ from .api import user_image_url
 from .const import DOMAIN
 from .coordinator import ZenkitDataUpdateCoordinator
 from .elements import due_element
+from .entity import async_add_list_entities
 from .todo import _completion_status, _due_date
 
 # Pixels of the profile image shown as entity picture
@@ -405,11 +406,15 @@ async def async_setup_entry(
         ZenkitSensor(coordinator, entry.entry_id, description)
         for description in SENSORS
     )
-    async_add_entities(
-        ZenkitListSensor(coordinator, list, description)
-        for list in coordinator.lists
-        for description in LIST_SENSORS
-        if not description.needs_due or _has_due(coordinator, list["shortId"])
+    async_add_list_entities(
+        coordinator,
+        entry,
+        async_add_entities,
+        lambda list: (
+            ZenkitListSensor(coordinator, list, description)
+            for description in LIST_SENSORS
+            if not description.needs_due or _has_due(coordinator, list["shortId"])
+        ),
     )
 
 

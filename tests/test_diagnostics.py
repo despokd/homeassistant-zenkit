@@ -1,7 +1,7 @@
 """Tests for the Zenkit diagnostics."""
 
 import json
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import MagicMock
 
 from homeassistant.const import CONF_TOKEN
 from pytest_homeassistant_custom_component.common import MockConfigEntry
@@ -37,7 +37,7 @@ async def test_diagnostics_redacts_secrets(hass):
         data={"a": [{"uuid": "e1"}, {"uuid": "e2"}]},
         failed_lists={"b"},
     )
-    coordinator.async_get_lists = AsyncMock(return_value=LISTS)
+    coordinator.lists = LISTS
     coordinator.zk.elements = {
         "a": [{"uuid": "t", "name": "Titel", "resourceRole": "title", "x": 1}]
     }

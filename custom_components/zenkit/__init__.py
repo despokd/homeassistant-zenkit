@@ -6,7 +6,7 @@ import logging
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_TOKEN, Platform
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.exceptions import ConfigEntryNotReady
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.translation import async_get_translations
@@ -55,6 +55,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     hass.data[DOMAIN][entry.entry_id] = coordinator
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+
+    @callback
+    def update_list_devices() -> None:
+        _update_list_devices(hass, entry, coordinator)
+
+    update_list_devices()
+    entry.async_on_unload(coordinator.async_add_listener(update_list_devices))
 
     return True
 
@@ -124,6 +131,39 @@ def _migrate_account_device(
     registry.async_update_device(
         old.id, new_identifiers={coordinator.account_identifier}
     )
+
+
+@callback
+def _update_list_devices(
+    hass: HomeAssistant, entry: ConfigEntry, coordinator: ZenkitDataUpdateCoordinator
+) -> None:
+    """Follow renamed and removed lists, new lists get devices with their entities.
+
+    Removing a device removes its entities from the entity registry.
+    """
+    registry = dr.async_get(hass)
+    current = coordinator.device_identifiers
+    list_prefix = f"{entry.entry_id}_list_"
+    for device in dr.async_entries_for_config_entry(registry, entry.entry_id):
+        is_list = any(
+            domain == DOMAIN and identifier.startswith(list_prefix)
+            for domain, identifier in device.identifiers
+        )
+        if is_list and not device.identifiers & current:
+            _LOGGER.debug("Removing device %s of a removed list", device.name)
+            registry.async_update_device(
+                device.id, remove_config_entry_id=entry.entry_id
+            )
+    for zenkit_list in coordinator.lists:
+        info = coordinator.list_device_info(zenkit_list)
+        device = registry.async_get_device(identifiers=info["identifiers"])
+        if device is not None and (
+            device.name != info["name"] or device.model != info["model"]
+        ):
+            # A name given in HA (name_by_user) is kept
+            registry.async_update_device(
+                device.id, name=info["name"], model=info["model"]
+            )
 
 
 async def async_remove_config_entry_device(
