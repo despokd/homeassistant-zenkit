@@ -7,8 +7,6 @@
 
 Bring your [Zenkit](https://zenkit.com) lists into Home Assistant as to-do lists, calendars and sensors.
 
-[![Open your Home Assistant instance and open a repository in the Marketplace.](https://my.home-assistant.io/badges/marketplace_repository.svg)](https://my.home-assistant.io/redirect/marketplace_repository/?owner=despokd&repository=homeassistant-zenkit&category=integration)
-
 <p align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/despokd/homeassistant-zenkit/main/custom_components/zenkit/brand/dark_logo.png">
@@ -30,8 +28,10 @@ Bring your [Zenkit](https://zenkit.com) lists into Home Assistant as to-do lists
 
 ### Marketplace (recommended)
 
-1. Open the Home Assistant Marketplace and search for **Zenkit**, or use the button above.
+1. Open the Home Assistant Marketplace and search for **Zenkit**, or use the button below.
 2. Install it and restart Home Assistant.
+
+[![Open your Home Assistant instance and open a repository in the Marketplace.](https://my.home-assistant.io/badges/marketplace_repository.svg)](https://my.home-assistant.io/redirect/marketplace_repository/?owner=despokd&repository=homeassistant-zenkit&category=integration)
 
 <details>
 <summary>Manual installation</summary>
