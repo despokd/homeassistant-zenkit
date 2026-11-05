@@ -173,3 +173,31 @@ def test_super_admin_yes():
     user = {**USER, "isSuperAdmin": True}
 
     assert _sensor("super_admin", user=user).native_value == "yes"
+
+
+ORGANIZATION_KEYS = {
+    "organization",
+    "organization_plan",
+    "organization_members",
+    "organization_quotas_exceeded",
+}
+
+
+@pytest.mark.parametrize("key", [d.key for d in SENSORS])
+def test_device(key):
+    sensor = _sensor(key)
+    coordinator = sensor.coordinator
+
+    if key in ORGANIZATION_KEYS:
+        assert sensor.device_info is coordinator.organization_device_info
+    else:
+        assert sensor.device_info is coordinator.device_info
+
+
+def test_organization_sensor_on_account_device_without_organization():
+    coordinator = MagicMock(organization_device_info=None)
+    description = next(d for d in SENSORS if d.key == "organization_plan")
+
+    sensor = ZenkitSensor(coordinator, "entry", description)
+
+    assert sensor.device_info is coordinator.device_info

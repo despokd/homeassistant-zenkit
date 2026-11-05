@@ -55,9 +55,19 @@ Lists whose fields could not be loaded at setup get their calendar after a reloa
 
 Data is polled every 60 seconds. Press the __Refresh Zenkit data__ button (`button.zenkit_refresh`) to update all lists immediately, e.g. after changing list fields in Zenkit. It can also be pressed from automations with the `button.press` action. New lists still require a reload of the integration.
 
-### Account device
+### Devices
 
-The integration adds one device per Zenkit account, named after your Zenkit display name. All lists, their calendars, the refresh button, the account and list sensors and the profile image belong to it. With the device, list names shown in Home Assistant get the device name as prefix, e.g. "Jane Doe Groceries". Entity ids of existing lists stay the same.
+The integration groups its entities into devices:
+
+| Device | Name | Entities |
+| --- | --- | --- |
+| Account | Your Zenkit display name | Account sensors, unread notifications, profile image, refresh button |
+| Organization | Organization name | Organization, plan, members and quotas sensors |
+| List, one per Zenkit list | List name | The todo list, its calendar and its count sensors |
+
+List and organization devices are linked to the account device ("Connected via"). The todo list and calendar are named after their list device, the count sensors are e.g. "Groceries Open entries".
+
+Installs from before the grouping keep their device, with its area and name, as the account device. Entity ids stay the same. Devices of lists deleted in Zenkit can be deleted on their device page after a reload of the integration.
 
 Each Zenkit account can only be added once.
 
@@ -108,7 +118,7 @@ Each list gets sensors counting its open items, with the same status and due dat
 | `sensor.zenkit_<list>_overdue_entries` | Open items due before now. Items with only a date are overdue from the next day |
 | `sensor.zenkit_<list>_entries_due_today` | Open items due today, including ones due earlier today |
 
-Lists without a due date field only get the open count. The counts update with each poll, and a list that fails to load makes its sensors unavailable. They belong to the account device.
+Lists without a due date field only get the open count. The counts update with each poll, and a list that fails to load makes its sensors unavailable. They belong to the device of their list.
 
 ### Diagnostics
 

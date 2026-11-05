@@ -254,7 +254,7 @@ class ZenkitTodoListEntity(
     """An Zenkit TodoListEntity."""
 
     _attr_has_entity_name = True
-    # Only for the attribute names, the name is the list name
+    # Only for the attribute names, the name is the device name
     _attr_translation_key = "list"
     _attr_supported_features = (
         TodoListEntityFeature.CREATE_TODO_ITEM
@@ -280,12 +280,16 @@ class ZenkitTodoListEntity(
         self.list_id = list_id
         self.list_short_id = list_short_id
         self.list_uuid = list_uuid
+        self.list_name = list_name
 
         self._attr_unique_id = list_uuid
-        self._attr_name = list_name
+        # The main entity of the list device, named after it
+        self._attr_name = None
         self._attr_todo_items = None
         self._attr_icon = icon
-        self._attr_device_info = coordinator.device_info
+        self._attr_device_info = coordinator.list_device_info(
+            {"uuid": list_uuid, "shortId": list_short_id, "name": list_name}
+        )
         # Folder path and appearance, see docs/user/configuration.md
         self._attr_extra_state_attributes = dict(attributes or {})
 
@@ -326,7 +330,7 @@ class ZenkitTodoListEntity(
         _LOGGER.debug(
             "Updated list %s (%s) with %s items",
             self.list_short_id,
-            self.name,
+            self.list_name,
             len(self._attr_todo_items),
         )
 
@@ -379,7 +383,7 @@ class ZenkitTodoListEntity(
                 raise ServiceValidationError(
                     translation_domain=DOMAIN,
                     translation_key="no_status_field",
-                    translation_placeholders={"list": self.name},
+                    translation_placeholders={"list": self.list_name},
                 )
             # Open on a list without status field, as the indeterminate checkbox sends
         description = _description(entry, elements) if entry else None

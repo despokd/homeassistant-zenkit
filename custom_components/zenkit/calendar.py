@@ -95,10 +95,11 @@ class ZenkitCalendarEntity(
         super().__init__(coordinator=coordinator)
         self.list_short_id = zenkit_list["shortId"]
         self._attr_unique_id = zenkit_list["uuid"]
-        self._attr_name = zenkit_list["name"]
+        # The calendar of the list device, named after it
+        self._attr_name = None
         self._attr_icon = _list_icon(zenkit_list)
         self._attr_initial_color = zenkit_list.get("iconColor") or None
-        self._attr_device_info = coordinator.device_info
+        self._attr_device_info = coordinator.list_device_info(zenkit_list)
         self._events: list[CalendarEvent] = []
 
     @property

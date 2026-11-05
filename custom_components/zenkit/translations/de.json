@@ -17,6 +17,11 @@
             "already_configured": "Konto ist bereits konfiguriert"
         }
     },
+    "device": {
+        "organization": {
+            "name": "Organisation"
+        }
+    },
     "entity": {
         "button": {
             "refresh": {
@@ -118,13 +123,13 @@
                 }
             },
             "open_entries": {
-                "name": "{list} offene Einträge"
+                "name": "Offene Einträge"
             },
             "overdue_entries": {
-                "name": "{list} überfällige Einträge"
+                "name": "Überfällige Einträge"
             },
             "entries_due_today": {
-                "name": "{list} heute fällige Einträge"
+                "name": "Heute fällige Einträge"
             }
         },
         "image": {
