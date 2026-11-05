@@ -170,6 +170,8 @@ class ZenkitDataUpdateCoordinator(DataUpdateCoordinator[dict]):
             name=zenkit_list["name"],
             manufacturer="Zenkit",
             model=self._model(LIST_MODELS.get(zenkit_list.get("resourceType"), "list")),
+            # A device, not a service as the account, clears it on older devices
+            entry_type=None,
             configuration_url=ZENKIT_URL,
             **self._via_account(),
         )

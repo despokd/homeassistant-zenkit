@@ -183,7 +183,7 @@ def test_list_device_info(coordinator):
     assert info["name"] == "A"
     assert info["model"] == "list"
     # A device, the account and organization are services
-    assert "entry_type" not in info
+    assert info["entry_type"] is None
     assert info["via_device_id"] == "account-device"
 
 

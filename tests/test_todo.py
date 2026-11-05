@@ -274,7 +274,7 @@ def test_entity_belongs_to_list_device(entity):
     assert entity.name is None
     assert entity.device_info is entity.coordinator.list_device_info.return_value
     entity.coordinator.list_device_info.assert_called_with(
-        {"uuid": "list-uuid", "shortId": "list", "name": "List"}
+        {"uuid": "list-uuid", "shortId": "list", "name": "List", "resourceType": None}
     )
 
 

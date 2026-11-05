@@ -62,6 +62,7 @@ async def async_setup_entry(
                 list["name"],
                 _list_icon(list),
                 {**(list.get("_folder") or {}), **_list_attributes(list)},
+                resource_type=list.get("resourceType"),
             )
         )
 
@@ -274,6 +275,7 @@ class ZenkitTodoListEntity(
         list_name: str,
         icon: str | None = None,
         attributes: dict[str, Any] | None = None,
+        resource_type: str | None = None,
     ) -> None:
         """Initialize TodoistTodoListEntity."""
         super().__init__(coordinator=coordinator)
@@ -288,7 +290,12 @@ class ZenkitTodoListEntity(
         self._attr_todo_items = None
         self._attr_icon = icon
         self._attr_device_info = coordinator.list_device_info(
-            {"uuid": list_uuid, "shortId": list_short_id, "name": list_name}
+            {
+                "uuid": list_uuid,
+                "shortId": list_short_id,
+                "name": list_name,
+                "resourceType": resource_type,
+            }
         )
         # Folder path and appearance, see docs/user/configuration.md
         self._attr_extra_state_attributes = dict(attributes or {})
