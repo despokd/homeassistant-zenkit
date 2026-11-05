@@ -8,7 +8,12 @@ import pytest
 from homeassistant.components.todo import TodoItem, TodoItemStatus
 from homeassistant.exceptions import ServiceValidationError
 
-from custom_components.zenkit.todo import ZenkitTodoListEntity, _list_attributes
+from custom_components.zenkit.todo import (
+    ITEM_DETAILS,
+    ZenkitTodoListEntity,
+    _item_details,
+    _list_attributes,
+)
 
 STAGE = "stage-uuid"
 NOTES = "notes-uuid"
@@ -314,4 +319,80 @@ def test_list_attributes_unset():
 
 
 def test_no_folder_attributes_without_folder(entity):
+    assert entity.extra_state_attributes == {}
+
+
+SUBITEMS = "subitems-uuid"
+DEPENDENCIES = "dependencies-uuid"
+RELATION_ELEMENTS = [
+    {"uuid": SUBITEMS, "elementcategory": 18, "resourceRole": "subtasks"},
+    {"uuid": DEPENDENCIES, "elementcategory": 19, "resourceRole": "dependencies"},
+    {"uuid": "hierarchy-uuid", "elementcategory": 17, "resourceRole": None},
+]
+
+
+def test_item_details():
+    item = {
+        f"{SUBITEMS}_parents": ["root-uuid", "parent-uuid"],
+        f"{SUBITEMS}_references": ["child-uuid"],
+        f"{DEPENDENCIES}_references": ["other-uuid"],
+        "hierarchy-uuid_value": "1.2",
+        "checklists": [
+            {
+                "name": "Packing",
+                "uuid": "checklist-uuid",
+                "items": [
+                    {"text": "Tent", "checked": True},
+                    {"text": "Stove", "checked": False},
+                ],
+                "shouldCheckedItemsBeHidden": False,
+            }
+        ],
+    }
+
+    assert _item_details(item, RELATION_ELEMENTS) == {
+        "parent": "parent-uuid",
+        "children": ["child-uuid"],
+        "dependencies": ["other-uuid"],
+        "hierarchy": "1.2",
+        "checklists": [{"name": "Packing", "checked": 1, "total": 2}],
+    }
+
+
+def test_item_details_empty():
+    item = {
+        f"{SUBITEMS}_parents": [],
+        f"{SUBITEMS}_references": [],
+        f"{DEPENDENCIES}_references": [],
+        "checklists": [],
+    }
+
+    assert _item_details(item, RELATION_ELEMENTS) == {}
+
+
+def test_item_details_without_elements_has_checklists():
+    item = {
+        f"{SUBITEMS}_references": ["child-uuid"],
+        "checklists": [{"name": "Checklist", "items": None}],
+    }
+
+    assert _item_details(item) == {
+        "checklists": [{"name": "Checklist", "checked": 0, "total": 0}]
+    }
+
+
+def test_item_details_attribute(entity):
+    entity.hass = MagicMock()
+    entity.async_write_ha_state = MagicMock()
+    entity.coordinator.zk.elements = {"list": RELATION_ELEMENTS}
+    entry = entity.coordinator.data["list"][0]
+    entry[f"{DEPENDENCIES}_references"] = ["other-uuid"]
+
+    entity._handle_coordinator_update()
+    assert entity.extra_state_attributes == {
+        ITEM_DETAILS: {"entry-uuid": {"dependencies": ["other-uuid"]}}
+    }
+
+    entry[f"{DEPENDENCIES}_references"] = []
+    entity._handle_coordinator_update()
     assert entity.extra_state_attributes == {}

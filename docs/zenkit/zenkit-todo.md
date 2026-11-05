@@ -13,6 +13,8 @@
 | `assignments` | 14 | Zugewiesen an | |
 | `files` | 15 | Anhänge | |
 | `tags` | 6 (categories) | Tags | |
+| `subtasks` | 18 (subentries) | Subitems | `<uuid>_references`, `_parents`, `_path`, … (see [Sub-items](#sub-items-dependencies-and-checklists)) |
+| `dependencies` | 19 (dependencies) | Abhängigkeiten | `<uuid>_references`, `_tags`, `_milestone` |
 
 - Lists of type `database` (e.g. created empty) only have `title`; elements without a role return `resourceRole: null`.
 - `isPrimary: true` marks the title element on every list, including `database` lists.
@@ -55,3 +57,40 @@ Text and date fields, verified against a `taskList` (2026-10-25):
 `POST /lists/{shortId}/entries/filter/list` returns at most `limit` entries (the integration uses 100) plus `countData.filteredTotal`; page with `skip`. An empty list returns `listEntries: null`.
 
 Observed 2026-10-25 on a list with 1383 entries (14 pages): 42 pages fetched back to back all returned 200 in 0.12–0.25 s, with no rate-limit or `Retry-After` headers. A page occasionally fails with a body that isn't JSON (seen once in HA, not reproducible), so error bodies must not be parsed as JSON. The rate limits themselves are undocumented in a readable form (#6).
+
+## Sub-items, dependencies and checklists
+
+Observed 2026-11-05 on a `project` list ("testproj") with a Subitems and a Dependencies element, by setting and then clearing relations, and read-only on 15 `taskList`s. The keys are also listed in `GET /api/v1/elementcategories` (public, `businessDataDefinition`).
+
+Subentries (category 18, `resourceRole: "subtasks"`, `singleton: true`), per entry:
+
+| Key | Example | Meaning |
+| --- | --- | --- |
+| `<uuid>_references` | `["<child uuid>"]` | uuids of the direct sub-items (children) |
+| `<uuid>_references_sort` | `[{"uuid", "displayString", …}]` | the children as entry objects |
+| `<uuid>_parents` | `["<root uuid>", "<parent uuid>"]` | all ancestors from the root, the last is the direct parent |
+| `<uuid>_path` | `"00000001.00000001"` | ltree path, one segment per level |
+| `<uuid>_sortOrder` | `3` | position among siblings, `null` for a sub-item |
+| `<uuid>_connected` | `true` | element `businessData.connected` is `true` too |
+
+- Set sub-items on the parent: `PUT` `{"<uuid>_references": [childUuid]}`. Zenkit then sets the child's `_parents` and `_path`; `[]` clears it.
+- Changing the tree renumbers the top-level `_path` segments of other entries (their `_sortOrder` stays), so clearing relations again does not restore the previous path order.
+
+Dependencies (category 19, `resourceRole: "dependencies"`, `singleton: true`), per entry: `<uuid>_references` (uuids of the linked entries), `<uuid>_references_sort` (as entry objects), `<uuid>_tags` (`{}`) and `<uuid>_milestone` (`false`). A dependency is only stored on the entry it was written to, not mirrored on the referenced entry. Which side the Zenkit UI shows as the predecessor was not checked.
+
+Hierarchy (category 17) was on none of the lists. Its category definition has a single text value (`businessDataDefinition.value`, `sortKey: "value"`, filter key `level`), so the entry key is assumed to be `<uuid>_value`.
+
+Checklists are not an element: every entry has a top-level `checklists` array (also `[]` on lists without any):
+
+```json
+"checklists": [
+  {
+    "name": "Checklist",
+    "uuid": "0341d82b-…",
+    "items": [{"text": "…", "checked": false}],
+    "shouldCheckedItemsBeHidden": false
+  }
+]
+```
+
+Checklist items have no uuid. Writing checklists is untested.

@@ -158,6 +158,9 @@
                     },
                     "background_id": {
                         "name": "Hintergrund-ID"
+                    },
+                    "item_details": {
+                        "name": "Eintragsdetails"
                     }
                 }
             }

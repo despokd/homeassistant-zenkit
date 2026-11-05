@@ -158,6 +158,9 @@
                     },
                     "background_id": {
                         "name": "Background ID"
+                    },
+                    "item_details": {
+                        "name": "Item details"
                     }
                 }
             }
