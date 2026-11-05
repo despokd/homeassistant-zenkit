@@ -14,8 +14,6 @@ from .const import DOMAIN, UPDATE_INTERVAL, USER_UPDATE_INTERVAL, ZENKIT_URL
 from .api import Zenkit
 
 _LOGGER = logging.getLogger(__name__)
-# HA 2026.8 links devices by device id, via_device is removed in 2027.8
-VIA_DEVICE_ID = "via_device_id" in DeviceInfo.__annotations__
 
 
 class ZenkitDataUpdateCoordinator(DataUpdateCoordinator[dict]):
@@ -174,12 +172,10 @@ class ZenkitDataUpdateCoordinator(DataUpdateCoordinator[dict]):
         )
 
     def _via_account(self) -> DeviceInfo:
-        """Link a device to the account device."""
-        if VIA_DEVICE_ID:
-            if self.account_device_id is None:
-                return DeviceInfo()
-            return DeviceInfo(via_device_id=self.account_device_id)
-        return DeviceInfo(via_device=self.account_identifier)
+        """Link a device to the account device, once it is registered."""
+        if self.account_device_id is None:
+            return DeviceInfo()
+        return DeviceInfo(via_device_id=self.account_device_id)
 
     @property
     def device_identifiers(self) -> set[tuple[str, str]]:

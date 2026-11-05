@@ -1,5 +1,7 @@
 # Installation
 
+Requires Home Assistant 2026.8 or newer.
+
 ## 1. Using HACS (recommended way)
 
 This integration is a not yet an official HACS Integration.
