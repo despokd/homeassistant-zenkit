@@ -4,18 +4,17 @@ from __future__ import annotations
 
 from collections.abc import Callable, Iterable
 
-from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import callback
 from homeassistant.helpers.entity import Entity
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .coordinator import ZenkitDataUpdateCoordinator
+from .coordinator import ZenkitConfigEntry, ZenkitDataUpdateCoordinator
 
 
 @callback
 def async_add_list_entities(
     coordinator: ZenkitDataUpdateCoordinator,
-    entry: ConfigEntry,
+    entry: ZenkitConfigEntry,
     async_add_entities: AddEntitiesCallback,
     entities_fn: Callable[[dict], Iterable[Entity]],
 ) -> None:

@@ -3,7 +3,7 @@
 ```
 HA config entry (API key)
   └─> Zenkit api client ──HTTPS──> https://zenkit.com/api/v1  (header: Zenkit-API-Key)
-        └─> ZenkitDataUpdateCoordinator (stored in hass.data[DOMAIN][entry_id])
+        └─> ZenkitDataUpdateCoordinator (stored in entry.runtime_data, typed ZenkitConfigEntry)
               ├─> account device (service, identifier = <entry_id>_account_<user id>)
               │     ├─> ZenkitRefreshButton
               │     ├─> ZenkitSensor × 17  (account, see sensor.SENSORS)

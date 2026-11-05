@@ -5,6 +5,7 @@ from __future__ import annotations
 from datetime import datetime, timedelta
 import logging
 
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
@@ -17,6 +18,8 @@ _LOGGER = logging.getLogger(__name__)
 # Device model translation keys by list resourceType, others are "list"
 LIST_MODELS = {"taskList": "task_list", "project": "project", "database": "database"}
 
+type ZenkitConfigEntry = ConfigEntry[ZenkitDataUpdateCoordinator]
+
 
 class ZenkitDataUpdateCoordinator(DataUpdateCoordinator[dict]):
     """Class to manage fetching Zenkit data."""
@@ -26,19 +29,20 @@ class ZenkitDataUpdateCoordinator(DataUpdateCoordinator[dict]):
         hass: HomeAssistant,
         zk: Zenkit,
         user: dict | None = None,
-        entry_id: str = "",
+        config_entry: ZenkitConfigEntry | None = None,
     ) -> None:
         """Initialize global Zenkit data updater."""
         super().__init__(
             hass,
             _LOGGER,
+            config_entry=config_entry,
             name=DOMAIN,
             update_interval=timedelta(seconds=UPDATE_INTERVAL),
             always_update=True,
         )
         self.zk = zk
         # Scopes the device identifiers, two accounts may share a list (#33)
-        self.entry_id = entry_id
+        self.entry_id = config_entry.entry_id if config_entry else ""
         # Registered at setup, before the devices linked to it
         self.account_device_id: str | None = None
         # Translated device models by translation key, loaded at setup

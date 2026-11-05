@@ -5,11 +5,10 @@ from __future__ import annotations
 from typing import Any
 
 from homeassistant.components.diagnostics import async_redact_data
-from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_TOKEN
 from homeassistant.core import HomeAssistant
 
-from .const import DOMAIN
+from .coordinator import ZenkitConfigEntry
 
 # The user payload contains the API key in plain text and personal data
 TO_REDACT = {
@@ -33,10 +32,10 @@ ELEMENT_FIELDS = ("uuid", "name", "resourceRole", "elementcategory", "isPrimary"
 
 
 async def async_get_config_entry_diagnostics(
-    hass: HomeAssistant, entry: ConfigEntry
+    hass: HomeAssistant, entry: ZenkitConfigEntry
 ) -> dict[str, Any]:
     """Return diagnostics for a config entry."""
-    coordinator = hass.data[DOMAIN][entry.entry_id]
+    coordinator = entry.runtime_data
     lists = []
     for list in coordinator.lists:
         short_id = list["shortId"]

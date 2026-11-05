@@ -8,7 +8,6 @@ import pytest
 from homeassistant.util import dt as dt_util
 
 from custom_components.zenkit.calendar import ZenkitCalendarEntity, async_setup_entry
-from custom_components.zenkit.const import DOMAIN
 
 STAGE = "stage-uuid"
 NOTES = "notes-uuid"
@@ -170,10 +169,11 @@ async def test_only_lists_with_due_date_field(coordinator):
     ]
     coordinator.zk.elements["no-due"] = ELEMENTS[:2]
     hass = MagicMock()
-    hass.data = {DOMAIN: {"entry": coordinator}}
     added = []
 
-    await async_setup_entry(hass, MagicMock(entry_id="entry"), added.extend)
+    await async_setup_entry(
+        hass, MagicMock(entry_id="entry", runtime_data=coordinator), added.extend
+    )
 
     assert [entity.unique_id for entity in added] == ["entry_list-uuid"]
 
@@ -181,9 +181,10 @@ async def test_only_lists_with_due_date_field(coordinator):
 async def test_calendar_added_once_fields_are_known(coordinator):
     coordinator.zk.elements = {}
     hass = MagicMock()
-    hass.data = {DOMAIN: {"entry": coordinator}}
     added = []
-    await async_setup_entry(hass, MagicMock(entry_id="entry"), added.extend)
+    await async_setup_entry(
+        hass, MagicMock(entry_id="entry", runtime_data=coordinator), added.extend
+    )
     coordinator.zk.elements = {"list": ELEMENTS}
 
     coordinator.async_add_listener.call_args.args[0]()

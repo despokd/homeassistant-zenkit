@@ -6,14 +6,13 @@ from typing import Any
 
 from homeassistant.components.calendar import CalendarEntity, CalendarEvent
 from homeassistant.components.todo import TodoItemStatus
-from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.util import dt as dt_util
 
-from .const import DOMAIN, DUE_DATE_FORMAT
-from .coordinator import ZenkitDataUpdateCoordinator
+from .const import DUE_DATE_FORMAT
+from .coordinator import ZenkitConfigEntry, ZenkitDataUpdateCoordinator
 from .elements import due_element
 from .entity import async_add_list_entities
 from .todo import _completion_status, _description, _list_icon
@@ -22,10 +21,12 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(
-    hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
+    hass: HomeAssistant,
+    entry: ZenkitConfigEntry,
+    async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up a calendar for each Zenkit list with a due date field."""
-    coordinator: ZenkitDataUpdateCoordinator = hass.data[DOMAIN][entry.entry_id]
+    coordinator = entry.runtime_data
 
     # Lists whose fields are not known yet get their calendar once they are
     async_add_list_entities(

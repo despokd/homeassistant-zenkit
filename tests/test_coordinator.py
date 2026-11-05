@@ -3,6 +3,7 @@
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from homeassistant.helpers.device_registry import DeviceEntryType
 from homeassistant.helpers.update_coordinator import UpdateFailed
@@ -44,7 +45,9 @@ def coordinator(hass, entries):
     zk.login = AsyncMock(return_value=USER)
     zk.get_organization = AsyncMock(return_value=ORGANIZATION)
     zk.get_organization_members_count = AsyncMock(return_value=2)
-    return ZenkitDataUpdateCoordinator(hass, zk, USER, "entry")
+    return ZenkitDataUpdateCoordinator(
+        hass, zk, USER, MockConfigEntry(domain=DOMAIN, entry_id="entry")
+    )
 
 
 async def test_update_fetches_all_lists(coordinator):
@@ -189,7 +192,9 @@ def test_list_device_info(coordinator):
 
 def test_device_identifiers_scoped_to_entry(hass, coordinator):
     coordinator._lists = [{"uuid": "u", "shortId": "a", "name": "A"}]
-    other = ZenkitDataUpdateCoordinator(hass, coordinator.zk, USER, "other")
+    other = ZenkitDataUpdateCoordinator(
+        hass, coordinator.zk, USER, MockConfigEntry(domain=DOMAIN, entry_id="other")
+    )
     other._lists = coordinator._lists
 
     assert coordinator.device_identifiers == {

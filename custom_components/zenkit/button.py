@@ -1,19 +1,20 @@
 """A button platform for Zenkit."""
 
 from homeassistant.components.button import ButtonEntity
-from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import DOMAIN
-from .coordinator import ZenkitDataUpdateCoordinator
+from .coordinator import ZenkitConfigEntry, ZenkitDataUpdateCoordinator
 
 
 async def async_setup_entry(
-    hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
+    hass: HomeAssistant,
+    entry: ZenkitConfigEntry,
+    async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up the Zenkit button platform config entry."""
-    coordinator = hass.data[DOMAIN][entry.entry_id]
+    coordinator = entry.runtime_data
     async_add_entities([ZenkitRefreshButton(coordinator, entry.entry_id)])
 
 
