@@ -103,6 +103,31 @@ def status_option(element: dict, completed: bool) -> dict | None:
     return None
 
 
+def open_entries_filter(elements: list[dict] | None) -> dict:
+    """Get the entries filter which leaves out completed entries.
+
+    Matches the entries without the done option of the status element, see
+    docs/zenkit/zenkit-todo.md#filtering-entries. Empty (all entries) while the
+    fields are unknown or the list has no status element with a done option.
+    """
+    stage = stage_element(elements) if elements else None
+    done = status_option(stage, True) if stage else None
+    if done is None:
+        return {}
+    return {
+        "AND": {
+            "TERMS": [
+                {
+                    "elementId": stage["id"],
+                    "modus": "contains",
+                    "filterCategories": [done["id"]],
+                    "negated": True,
+                }
+            ]
+        }
+    }
+
+
 def _role_element(elements: list[dict], role: str) -> dict | None:
     """Get the element with a role."""
     for element in elements:

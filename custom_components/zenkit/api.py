@@ -20,6 +20,7 @@ from .elements import (
     due_element,
     labels_element,
     notes_element,
+    open_entries_filter,
     option_by_name,
     option_names,
     stage_element,
@@ -298,10 +299,17 @@ class Zenkit:
         return lists
 
     async def get_list_entries(self, list_short_id: str) -> list[dict]:
-        """Get all list entries, page by page."""
+        """Get the open list entries, page by page.
+
+        Completed entries are left out by Zenkit once the list's fields are cached,
+        else all entries are returned.
+        """
+        filter = open_entries_filter(self.elements.get(list_short_id))
         entries = []
         while True:
-            page = await self._get_list_entries_page(list_short_id, len(entries))
+            page = await self._get_list_entries_page(
+                list_short_id, len(entries), filter
+            )
             if page["listEntries"] is None:
                 return entries
             entries += page["listEntries"]
@@ -311,12 +319,14 @@ class Zenkit:
             ):
                 return entries
 
-    async def _get_list_entries_page(self, list_short_id: str, skip: int) -> dict:
+    async def _get_list_entries_page(
+        self, list_short_id: str, skip: int, filter: dict
+    ) -> dict:
         """Get one page of list entries, retrying transient errors."""
         # https://base.zenkit.com/docs/api/entries/post-api-v1-lists-listshortid-entries-filter-list
         url = f"{API_URL}/lists/{list_short_id}/entries/filter/list"
         data = {
-            "filter": {},
+            "filter": filter,
             "groupByElementId": 0,
             "limit": ENTRIES_LIMIT,
             "skip": skip,

@@ -310,6 +310,69 @@ async def test_get_list_entries_retries_connection_error(requests_mock, no_sleep
     assert await Zenkit("key").get_list_entries("list") == [{"id": 1}]
 
 
+def _filter(requests_mock):
+    return requests_mock.post.call_args.kwargs["json"]["filter"]
+
+
+async def test_get_list_entries_unfiltered_without_fields(requests_mock):
+    requests_mock.post.return_value = _page([{"id": 1}], 1)
+
+    await Zenkit("key").get_list_entries("list")
+
+    assert _filter(requests_mock) == {}
+
+
+async def test_get_list_entries_leaves_out_completed(requests_mock):
+    requests_mock.post.side_effect = [
+        _page([{"id": i} for i in range(100)], 101),
+        _page([{"id": 100}], 101),
+    ]
+    zk = Zenkit("key")
+    zk.elements["list"] = [*ELEMENTS[:3], {**ELEMENTS[3], "id": 7}]
+
+    await zk.get_list_entries("list")
+
+    expected = {
+        "AND": {
+            "TERMS": [
+                {
+                    "elementId": 7,
+                    "modus": "contains",
+                    "filterCategories": [DONE_ID],
+                    "negated": True,
+                }
+            ]
+        }
+    }
+    filters = [c.kwargs["json"]["filter"] for c in requests_mock.post.call_args_list]
+    assert filters == [expected, expected]
+
+
+async def test_get_list_entries_filters_status_found_by_color(requests_mock):
+    requests_mock.post.return_value = _page([], 0)
+    zk = Zenkit("key")
+    zk.elements["list"] = [
+        {**_element(None, [_option(DONE_ID, None, "#3ba744")]), "id": 8}
+    ]
+
+    await zk.get_list_entries("list")
+
+    term = _filter(requests_mock)["AND"]["TERMS"][0]
+    assert (term["elementId"], term["filterCategories"]) == (8, [DONE_ID])
+
+
+async def test_get_list_entries_unfiltered_without_done_option(requests_mock):
+    requests_mock.post.return_value = _page([], 0)
+    zk = Zenkit("key")
+    zk.elements["list"] = [
+        {**_element("stage", [_option(TODO_ID, "todo", "#0089d1")]), "id": 9}
+    ]
+
+    await zk.get_list_entries("list")
+
+    assert _filter(requests_mock) == {}
+
+
 @pytest.fixture
 def user():
     return {"id": 1, "username": "user", "api_key": "key"}

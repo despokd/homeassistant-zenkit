@@ -71,6 +71,23 @@ Text and date fields, verified against a `taskList` (2026-10-25):
 
 Observed 2026-10-25 on a list with 1383 entries (14 pages): 42 pages fetched back to back all returned 200 in 0.12–0.25 s, with no rate-limit or `Retry-After` headers. A page occasionally fails with a body that isn't JSON (seen once in HA, not reproducible), so error bodies must not be parsed as JSON. The rate limits themselves are undocumented in a readable form (#6).
 
+### Filtering entries
+
+The `filter` body of the same endpoint takes `{"AND": {"TERMS": [term, ...]}}` (or `OR`). Not in readable docs, found from the validation errors (`400`, `C21`) on 2026-11-05:
+
+- A term needs `elementId` (numeric, `elementUuid` is not accepted) and `modus`: `isEmpty`, `contains`, `equals`, `startsWith`, `endsWith`, `inRange`, `greaterOrEqual`, `lessOrEqual`, `containsCurrentUser` or `null`. `type`, `NOT` and a list under `AND` are rejected.
+- The value key is the element category's `filterKeys` from `GET /elementcategories`; for categories (6) it is `filterCategories` with option ids.
+- `"negated": true` inverts a term.
+- `countData.total` stays the unfiltered count, `filteredTotal` is the filtered one.
+
+The integration leaves out completed entries with:
+
+```json
+{"AND": {"TERMS": [{"elementId": <stage id>, "modus": "contains", "filterCategories": [<done option id>], "negated": true}]}}
+```
+
+This keeps entries with an empty status. Checked on 16 lists (2,102 entries, 360 open, 34 with an empty status): the filtered entries matched the integration's own completion check on every list. A shopping list went from 1,407 entries (15 pages) to 7 (1 page). `contains` without `negated` and the done option returned the 1,400 completed ones; `modus: isEmpty` on the status element returned 0, even with entries without a status.
+
 ## Sub-items, dependencies and checklists
 
 Observed 2026-11-05 on a `project` list ("testproj") with a Subitems and a Dependencies element, by setting and then clearing relations, and read-only on 15 `taskList`s. The keys are also listed in `GET /api/v1/elementcategories` (public, `businessDataDefinition`).
