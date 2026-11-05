@@ -2,16 +2,13 @@
 
 Requires Home Assistant 2026.8 or newer.
 
-## 1. Using HACS (recommended way)
+## 1. Using the Marketplace (recommended way)
 
-This integration is a not yet an official HACS Integration.
+1. Open the Home Assistant Marketplace
+2. Search for "Zenkit" and install it, or use the link below.
+3. Restart Home Assistant.
 
-1. Open HACS
-2. Open options with the three dots at the upper right
-3. Add this repo `https://github.com/despokd/homeassistant-zenkit` as a custom repository with type `Integration`
-4. then install the "Zenkit" integration or use the link below.
-
-[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=despokd&repository=homeassistant-zenkit&category=integration)
+[![Open your Home Assistant instance and open a repository in the Marketplace.](https://my.home-assistant.io/badges/marketplace_repository.svg)](https://my.home-assistant.io/redirect/marketplace_repository/?owner=despokd&repository=homeassistant-zenkit&category=integration)
 
 If you use this method, your component will always update to the latest version.
 
