@@ -12,7 +12,7 @@ custom_components/zenkit/
 ├── todo.py           # One TodoListEntity per Zenkit list; maps entries <-> TodoItem
 ├── calendar.py     # Read-only CalendarEntity per list with a due date field; events are the open entries with a due date, from coordinator data
 ├── button.py         # Refresh button per entry: drops cached list elements and refreshes all lists
-├── sensor.py         # Account and organization sensors per entry, described by SENSORS
+├── sensor.py         # Account and organization sensors per entry (SENSORS); open/overdue/due today counts per list (LIST_SENSORS) from coordinator data, using the todo.py status and due date
 ├── image.py          # Profile image of the account (public URL, no API key)
 ├── diagnostics.py    # Config entry diagnostics: redacted user, lists with element roles, failures
 ├── const.py          # DOMAIN, ZENKIT_URL, API_URL, UPDATE_INTERVAL, USER_UPDATE_INTERVAL, ENTRIES_LIMIT, RETRY_DELAYS, DUE_DATE_FORMAT, DUE_DATETIME_FORMAT
