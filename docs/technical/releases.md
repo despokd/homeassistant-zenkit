@@ -9,7 +9,7 @@ The version bump follows the [Conventional Commits](https://www.conventionalcomm
 
 | Commit | Bump |
 | --- | --- |
-| `fix:` | patch |
+| `fix:`, `perf:` | patch |
 | `feat:` | minor |
 | `feat!:` or `BREAKING CHANGE:` footer | major |
 | `docs:`, `chore:`, `test:`, `ci:`, … | none, not in the changelog |
