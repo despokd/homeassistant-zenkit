@@ -88,6 +88,31 @@ The integration leaves out completed entries with:
 
 This keeps entries with an empty status. Checked on 16 lists (2,102 entries, 360 open, 34 with an empty status): the filtered entries matched the integration's own completion check on every list. A shopping list went from 1,407 entries (15 pages) to 7 (1 page). `contains` without `negated` and the done option returned the 1,400 completed ones; `modus: isEmpty` on the status element returned 0, even with entries without a status.
 
+## Entry order
+
+Every entry has a top-level `sortOrder`, also on lists without a Subitems element. It is unrelated to the Subitems `<uuid>_sortOrder` ([Sub-items](#sub-items-dependencies-and-checklists)).
+
+Observed 2026-11-12 on three `taskList`s (1418, 135 and 20 entries):
+
+- A decimal number, returned as a string by `entries/filter/list` (`"-7633.0040410005695"`) and as a number by create and reorder. Never `null`, unique per list.
+- `entries/filter/list` returns entries sorted ascending by it.
+- A new entry gets a value below the lowest one (top of the list; seen −2 to −4), matching the account setting `defaultSortOrderForNewEntries: lowest` ([Current user](zenkit-account.md#current-user)).
+
+Reorder with `PUT /api/v1/lists/{listAllId}/entries/{listEntryAllId}/reorder` (in the docs as "Reorder an entry"), body `{"beforeAnchorId": <id>}`, tested with throwaway entries in a `taskList`:
+
+| `beforeAnchorId` | Result |
+| --- | --- |
+| id of an entry | Moved right after it: `sortOrder` becomes the midpoint of the anchor and its next entry (`-203` and `-201` → `-202`) |
+| id of the last entry | Moved to the bottom: last `sortOrder` + `0.000001` |
+| `null`, or `{}` | Moved to the top: lowest `sortOrder` − `0.000001` |
+| a uuid | `400` (`C21`, "not of type Number") |
+| unknown id | `404` (`C2`, "the anchor item was not found") |
+
+- Only the moved entry's `sortOrder` changes, others are not renumbered.
+- The entry in the path may be the numeric id or the uuid; the anchor must be the numeric `id`.
+- The response is the moved entry.
+- Not checked: sub-items, and what happens once midpoints run out of float precision.
+
 ## Sub-items, dependencies and checklists
 
 Observed 2026-11-05 on a `project` list ("testproj") with a Subitems and a Dependencies element, by setting and then clearing relations, and read-only on 15 `taskList`s. The keys are also listed in `GET /api/v1/elementcategories` (public, `businessDataDefinition`).

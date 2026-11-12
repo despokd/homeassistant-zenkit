@@ -449,6 +449,22 @@ class Zenkit:
             _log_error(response, "Failed to update entry %s", entry_id)
             raise Exception("Error updating list entry")
 
+    async def reorder_entry(
+        self, list_short_id: str, entry_id: str, previous_id: int | None
+    ) -> None:
+        """Move an entry right after the entry with the numeric id `previous_id`.
+
+        `None` moves it to the top. Zenkit only changes the moved entry's
+        `sortOrder`, see docs/zenkit/zenkit-todo.md#entry-order.
+        """
+        # https://base.zenkit.com/docs/api/entries/put-api-v1-lists-listallid-entries-listentryid-reorder
+        url = f"{API_URL}/lists/{list_short_id}/entries/{entry_id}/reorder"
+        response = await self._request("PUT", url, json={"beforeAnchorId": previous_id})
+
+        if response.status != 200:
+            _log_error(response, "Failed to move entry %s", entry_id)
+            raise Exception("Error moving list entry")
+
     async def _write_fields(self, list_short_id: str, **kwargs) -> dict:
         """Get the entry fields to write the given values to a list."""
         # Fetched on each write, so renamed or added fields and options are picked up

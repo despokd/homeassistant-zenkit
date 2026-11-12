@@ -5,7 +5,11 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from homeassistant.components.todo import TodoItem, TodoItemStatus
+from homeassistant.components.todo import (
+    TodoItem,
+    TodoItemStatus,
+    TodoListEntityFeature,
+)
 from homeassistant.exceptions import ServiceValidationError
 
 from custom_components.zenkit.exceptions import UpdateFailedException
@@ -607,3 +611,39 @@ async def test_update_entry_unknown_item_fails(entity):
     # A title is never put in a request path
     entity.coordinator.zk.get_list_entry.assert_not_awaited()
     entity.coordinator.zk.update_entry.assert_not_awaited()
+
+
+@pytest.fixture
+def entity_with_entries(entity):
+    """Todo entity with three open entries carrying their numeric ids."""
+    entity.coordinator.data["list"] = [
+        {"id": id, "uuid": f"uuid-{id}", "displayString": f"Item {id}"}
+        for id in (1, 2, 3)
+    ]
+    entity.coordinator.zk.reorder_entry = AsyncMock()
+    return entity
+
+
+async def test_move_item_after_previous(entity_with_entries):
+    await entity_with_entries.async_move_todo_item("uuid-1", "uuid-3")
+    entity_with_entries.coordinator.zk.reorder_entry.assert_awaited_once_with(
+        "list", "uuid-1", 3
+    )
+    entity_with_entries.coordinator.async_refresh_list.assert_awaited_once_with("list")
+
+
+async def test_move_item_to_top(entity_with_entries):
+    await entity_with_entries.async_move_todo_item("uuid-3", None)
+    entity_with_entries.coordinator.zk.reorder_entry.assert_awaited_once_with(
+        "list", "uuid-3", None
+    )
+
+
+async def test_move_item_after_unknown_item_fails(entity_with_entries):
+    with pytest.raises(ServiceValidationError):
+        await entity_with_entries.async_move_todo_item("uuid-1", "missing")
+    entity_with_entries.coordinator.zk.reorder_entry.assert_not_awaited()
+
+
+def test_supports_moving_items(entity):
+    assert entity.supported_features & TodoListEntityFeature.MOVE_TODO_ITEM

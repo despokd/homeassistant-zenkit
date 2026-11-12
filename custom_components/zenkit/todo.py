@@ -269,6 +269,7 @@ class ZenkitTodoListEntity(
         | TodoListEntityFeature.SET_DUE_DATE_ON_ITEM
         | TodoListEntityFeature.SET_DUE_DATETIME_ON_ITEM
         | TodoListEntityFeature.SET_DESCRIPTION_ON_ITEM
+        | TodoListEntityFeature.MOVE_TODO_ITEM
     )
 
     def __init__(
@@ -508,6 +509,33 @@ class ZenkitTodoListEntity(
             _LOGGER.error("Error updating todo item: %s", item.uid, exc_info=error)
             raise error
 
+        await self.coordinator.async_refresh_list(self.list_short_id)
+
+    async def async_move_todo_item(
+        self, uid: str, previous_uid: str | None = None
+    ) -> None:
+        """Move an item right after `previous_uid`, or to the top without it."""
+        previous_id = None
+        if previous_uid is not None:
+            # Zenkit takes the numeric id of the entry before, not its uuid
+            previous_id = next(
+                (
+                    entry["id"]
+                    for entry in self.coordinator.data.get(self.list_short_id, [])
+                    if entry["uuid"] == previous_uid
+                ),
+                None,
+            )
+            if previous_id is None:
+                raise ServiceValidationError(
+                    translation_domain=DOMAIN,
+                    translation_key="item_not_found",
+                    translation_placeholders={
+                        "item": previous_uid,
+                        "list": self.list_name,
+                    },
+                )
+        await self.coordinator.zk.reorder_entry(self.list_short_id, uid, previous_id)
         await self.coordinator.async_refresh_list(self.list_short_id)
 
     async def async_delete_todo_items(self, uids: list[str]) -> None:
