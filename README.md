@@ -7,10 +7,7 @@
 Bring your [Zenkit](https://zenkit.com) lists into Home Assistant as to-do lists, calendars and sensors.
 
 <p align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/despokd/homeassistant-zenkit/main/custom_components/zenkit/brand/dark_logo.png">
-    <img alt="Zenkit" src="https://raw.githubusercontent.com/despokd/homeassistant-zenkit/main/custom_components/zenkit/brand/logo.png">
-  </picture>
+  <img alt="Zenkit for Home Assistant: Zenkit lists shown in the Home Assistant to-do panel" src="https://raw.githubusercontent.com/despokd/homeassistant-zenkit/main/docs/assets/social-preview.png">
 </p>
 
 ## Features
