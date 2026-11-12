@@ -1,0 +1,9 @@
+# Test requirements for the "min" CI run, against the oldest Home Assistant
+# release this integration supports. Keep in sync with "homeassistant" in
+# hacs.json; how to bump: docs/technical/ci.md.
+# Pins homeassistant==2026.8.0
+pytest-homeassistant-custom-component==0.13.354
+# Requirements of the conversation integration in that release, for the Assist
+# sentences (gazetteer-matcher is only required from 2026.9)
+hassil==3.11.0
+home-assistant-intents==2026.7.30
