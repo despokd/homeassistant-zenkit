@@ -1,5 +1,18 @@
 # Changelog
 
+## [2.0.0](https://github.com/despokd/homeassistant-zenkit/compare/v1.3.0...v2.0.0) (2026-11-12)
+
+
+### ⚠ BREAKING CHANGES
+
+* require Home Assistant 2026.11.0 and test against the minimum version ([#79](https://github.com/despokd/homeassistant-zenkit/issues/79))
+
+### Features
+
+* add a zenkit.update_entry action ([#72](https://github.com/despokd/homeassistant-zenkit/issues/72)) ([#81](https://github.com/despokd/homeassistant-zenkit/issues/81)) ([68bbfed](https://github.com/despokd/homeassistant-zenkit/commit/68bbfed5b9772e3b65bd7a8f1a27786030a0fe5f))
+* reorder to-do items ([#82](https://github.com/despokd/homeassistant-zenkit/issues/82)) ([4e5f6a1](https://github.com/despokd/homeassistant-zenkit/commit/4e5f6a178f243531ad6fff25745a24dccc9cb3c6))
+* require Home Assistant 2026.11.0 and test against the minimum version ([#79](https://github.com/despokd/homeassistant-zenkit/issues/79)) ([c260353](https://github.com/despokd/homeassistant-zenkit/commit/c260353581a752206f709bb79c8598833425b499))
+
 ## [1.3.0](https://github.com/despokd/homeassistant-zenkit/compare/v1.2.0...v1.3.0) (2026-11-05)
 
 
