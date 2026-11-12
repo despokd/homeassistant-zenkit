@@ -1,6 +1,6 @@
 # Installation
 
-Requires Home Assistant 2026.8 or newer.
+Requires Home Assistant 2026.11 or newer.
 
 ## 1. Using the Marketplace (recommended way)
 

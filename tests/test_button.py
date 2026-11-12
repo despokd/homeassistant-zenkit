@@ -2,7 +2,7 @@
 
 from unittest.mock import AsyncMock, MagicMock
 
-from pytest_homeassistant_custom_component.common import MockEntityPlatform
+from pytest_homeassistant.common import MockEntityPlatform
 
 from custom_components.zenkit.button import ZenkitRefreshButton
 

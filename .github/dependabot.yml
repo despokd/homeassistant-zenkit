@@ -19,3 +19,10 @@ updates:
     commit-message:
       prefix: chore
       include: scope
+    ignore:
+      # Pinned in requirements_test_min.txt to match the minimum Home Assistant
+      # version in hacs.json; bumped by hand together with it, see docs/technical/ci.md
+      - dependency-name: pytest-homeassistant
+      - dependency-name: hassil
+      - dependency-name: home-assistant-intents
+      - dependency-name: gazetteer-matcher
