@@ -53,7 +53,7 @@ Rewrite the issue body: table, "Already in line" list and `Searched <today>`.
 
 ### 6. Propose issues
 
-For each new gap that works with what HA offers today, or tracks a bug in this integration, propose an issue to the user. On their yes: create it, link core pull requests as in step 5, add it as a sub-issue of the gap list (by the issue's `id`, not its number) and put its number in the table.
+For each new gap that works with what HA offers today, or tracks a bug in this integration, propose an issue to the user. On their yes: create it with the label `bug` for a bug in this integration or `enhancement` for a feature, link core pull requests as in step 5, add it as a sub-issue of the gap list (by the issue's `id`, not its number) and put its number in the table.
 
 ### 7. Report
 
