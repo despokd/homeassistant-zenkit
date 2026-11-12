@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.1.0](https://github.com/despokd/homeassistant-zenkit/compare/v2.0.0...v2.1.0) (2026-11-12)
+
+
+### Features
+
+* choose the synced list types at setup and in the options ([#84](https://github.com/despokd/homeassistant-zenkit/issues/84)) ([c16b7a2](https://github.com/despokd/homeassistant-zenkit/commit/c16b7a225b4f0ec2e9fa77ec6b42dd9e0a9dfd4c))
+
 ## [2.0.0](https://github.com/despokd/homeassistant-zenkit/compare/v1.3.0...v2.0.0) (2026-11-12)
 
 
