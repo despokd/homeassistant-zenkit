@@ -32,7 +32,7 @@ Before each commit, check `README.md` and `docs/` against the change: search the
 
 Commit messages and PR titles follow [Conventional Commits](https://www.conventionalcommits.org/) (`feat:`, `fix:`, `docs:`, …); they drive the automated version bump and release notes. Don't bump the version by hand. Details: [docs/technical/releases.md](docs/technical/releases.md).
 
-Tests need Python 3.14 (older versions resolve an old Home Assistant and fail to import): `python3.14 -m venv .venv && .venv/bin/pip install -r requirements_test.txt` (or `uv venv -p 3.14 .venv`), then `.venv/bin/python -m pytest`. Format with `.venv/bin/black .`; `requirements_test.txt` pins the same version CI checks with. CI also tests against the minimum Home Assistant version from `hacs.json` (`requirements_test_min.txt`, bump both together). CI details: [docs/technical/ci.md](docs/technical/ci.md).
+Tests need Python 3.14 (older versions resolve an old Home Assistant and fail to import): `python3.14 -m venv .venv && .venv/bin/pip install -r requirements_test.txt` (or `uv venv -p 3.14 .venv`), then `.venv/bin/python -m pytest`. Format with `.venv/bin/black .`; `requirements_test.txt` pins the same version CI checks with. Tests use Home Assistant's `pytest-homeassistant` package (import helpers from `pytest_homeassistant`); don't install the old `pytest-homeassistant-custom-component` alongside it. CI also tests against the minimum Home Assistant version from `hacs.json` (`requirements_test_min.txt`, bump both together). CI details: [docs/technical/ci.md](docs/technical/ci.md).
 
 ## TODOs
 

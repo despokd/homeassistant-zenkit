@@ -1,4 +1,6 @@
-pytest-homeassistant-custom-component
+# Pins the matching homeassistant release; >= skips unrelated 0.1.x releases
+# from 2020 under the same name
+pytest-homeassistant>=2026.11.0
 # Requirements of the conversation integration, for the Assist sentences
 gazetteer-matcher
 hassil

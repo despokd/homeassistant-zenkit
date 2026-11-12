@@ -7,7 +7,7 @@ import pytest
 from homeassistant import config_entries
 from homeassistant.const import CONF_TOKEN
 from homeassistant.data_entry_flow import FlowResultType
-from pytest_homeassistant_custom_component.common import MockConfigEntry
+from pytest_homeassistant.common import MockConfigEntry
 
 from custom_components.zenkit.const import CONF_SHOPPING_LIST, DOMAIN
 from custom_components.zenkit.exceptions import (
@@ -16,11 +16,6 @@ from custom_components.zenkit.exceptions import (
 )
 
 USER = {"id": 906842, "username": "user"}
-
-
-@pytest.fixture(autouse=True)
-def auto_enable_custom_integrations(enable_custom_integrations):
-    yield
 
 
 @pytest.fixture
