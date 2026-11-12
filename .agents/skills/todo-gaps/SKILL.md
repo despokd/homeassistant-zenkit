@@ -50,7 +50,6 @@ Rewrite the issue body: table, "Already in line" list and `Searched <today>`.
 
 - Write core references as `home-assistant/core#123`; a bare `#123` links to this repository.
 - The "Issue" column holds this repository's issue number, or `—`.
-- End the body with the Claude Code footer.
 
 ### 6. Propose issues
 
