@@ -18,6 +18,8 @@ Zenkit lists have user-defined fields, keyed `<elementUuid>_<type>`. Fields are 
 - An empty description (`""`) is shown as none.
 - Until the elements of a list are fetched (or if the fetch failed), reads use the old heuristics: status by the `#3ba744` color in any `*_categories_sort`, description by the first `*_text` that differs from `displayString`, due by the first set `*_date`.
 
+Items keep the order of the API response, which is ascending by the entry's top-level `sortOrder` ([Entry order](../zenkit/zenkit-todo.md#entry-order)). `async_move_todo_item` (`MOVE_TODO_ITEM`) sends the numeric `id` of `previous_uid` from the coordinator data as anchor, `null` for the top; a `previous_uid` not in the data raises `item_not_found`. Hidden completed entries keep their `sortOrder`, so they may end up on either side of a moved item.
+
 Completed items are not shown in HA. Once a list's elements are known, Zenkit leaves them out of the response already ([Filtering entries](../zenkit/zenkit-todo.md#filtering-entries)); until then, and as a safety net, the entities, sensors and calendar skip them too.
 
 ## Lists without a status field

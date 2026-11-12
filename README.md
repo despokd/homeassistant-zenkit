@@ -15,7 +15,7 @@ Bring your [Zenkit](https://zenkit.com) lists into Home Assistant as to-do lists
 
 ## Features
 
-- One **to-do entity per Zenkit list**: add, edit, complete and delete items
+- One **to-do entity per Zenkit list**: add, edit, complete, reorder and delete items
 - **`zenkit.create_entry` and `zenkit.update_entry` actions** to add and change items with status, labels, assignees and a checklist
 - Item details: description, due date, sub-items, dependencies and checklists
 - A read-only **calendar per list** with the due dates of open items

@@ -46,6 +46,10 @@ Example template: `{{ state_attr('todo.groceries', 'folder_path') | join(' / ') 
 
 Completing an item sets the list's done status in Zenkit, and the item disappears from Home Assistant. Completed items aren't loaded at all, so lists with many done items poll as fast as short ones. To reopen an item, change its status in Zenkit; it shows up again with the next poll.
 
+### Item order
+
+Items are shown in their Zenkit order. Drag an item in the to-do card to move it; the new position is saved in Zenkit, where only the moved item changes. New items appear at the top, as in Zenkit.
+
 ### Lists without status
 
 Items are completed by the list's status field. Lists without one (or without a done status) show their items in a separate section with an indeterminate checkbox (neither checked nor unchecked). Clicking it changes nothing in Zenkit, but the card shows it ticked until the page is reloaded. Completing an item through an action shows an error. The entity state counts only open items, so it is `0` for these lists.

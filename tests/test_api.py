@@ -267,6 +267,20 @@ async def test_update_caches_elements(api):
     assert zk.elements == {"list": ELEMENTS}
 
 
+@pytest.mark.parametrize("previous_id", [42, None])
+async def test_reorder_entry(api, previous_id):
+    await api.zenkit().reorder_entry("list", "entry-uuid", previous_id)
+    ((url, body),) = api.calls("PUT")
+    assert url.endswith("/lists/list/entries/entry-uuid/reorder")
+    assert body == {"beforeAnchorId": previous_id}
+
+
+async def test_reorder_entry_fails(api):
+    api.put = [_response({}, 404)]
+    with pytest.raises(Exception, match="moving"):
+        await api.zenkit().reorder_entry("list", "entry-uuid", 42)
+
+
 async def test_create_entry_with_fields_in_one_request(api):
     await api.zenkit().create_entry(
         "list",
