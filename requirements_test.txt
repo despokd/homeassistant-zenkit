@@ -3,3 +3,4 @@ pytest-homeassistant-custom-component
 gazetteer-matcher
 hassil
 home-assistant-intents
+black==26.10.1

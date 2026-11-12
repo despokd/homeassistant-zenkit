@@ -2,8 +2,7 @@
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Default-41BDF5.svg)](https://github.com/hacs/integration)
 [![GitHub Release](https://img.shields.io/github/v/release/despokd/homeassistant-zenkit)](https://github.com/despokd/homeassistant-zenkit/releases)
-[![HACS Validate](https://img.shields.io/github/actions/workflow/status/despokd/homeassistant-zenkit/hacs.yaml?branch=main&label=HACS%20Validate)](https://github.com/despokd/homeassistant-zenkit/actions/workflows/hacs.yaml)
-[![CI (hassfest, tests, black)](https://img.shields.io/github/actions/workflow/status/despokd/homeassistant-zenkit/CI.yaml?branch=main&label=hassfest%20%26%20CI)](https://github.com/despokd/homeassistant-zenkit/actions/workflows/CI.yaml)
+[![CI (tests, black, hassfest, HACS)](https://img.shields.io/github/actions/workflow/status/despokd/homeassistant-zenkit/CI.yaml?branch=main&label=CI)](https://github.com/despokd/homeassistant-zenkit/actions/workflows/CI.yaml)
 
 Bring your [Zenkit](https://zenkit.com) lists into Home Assistant as to-do lists, calendars and sensors.
 

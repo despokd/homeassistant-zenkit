@@ -5,5 +5,6 @@
 - [Entry → TodoItem mapping](todoitem-mapping.md)
 - [Assist shopping list](assist.md)
 - [Config entry versions](config-entry-versions.md)
+- [CI](ci.md)
 - [Releases](releases.md)
 - [Decisions](decisions/README.md)
