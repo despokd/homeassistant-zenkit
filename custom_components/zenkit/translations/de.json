@@ -3,9 +3,13 @@
         "step": {
             "user": {
                 "data": {
-                    "token": "API-Token"
+                    "token": "API-Token",
+                    "list_types": "Außerdem synchronisieren"
                 },
-                "description": "Holen Sie sich Ihren API-Token aus dem Abschnitt Konto > Integrationen > API-Tokens"
+                "description": "Holen Sie sich Ihren API-Token aus dem Abschnitt Konto > Integrationen > API-Tokens",
+                "data_description": {
+                    "list_types": "To-do-Listen werden immer synchronisiert. Projekte und Datenbanken haben andere Felder, ihre Einträge passen daher weniger gut als To-do-Einträge."
+                }
             }
         },
         "error": {
@@ -21,13 +25,23 @@
         "step": {
             "init": {
                 "title": "Optionen",
-                "description": "Assist leitet Sätze wie „füge Milch zur Einkaufsliste hinzu“ an die Integration Einkaufsliste weiter, auch wenn sie nicht eingerichtet ist. Wählen Sie eine Zenkit-Liste, die diese Sätze stattdessen erhält.",
+                "description": "Wählen Sie, welche Zenkit-Listen synchronisiert werden. Assist leitet Sätze wie „füge Milch zur Einkaufsliste hinzu“ an die Integration Einkaufsliste weiter, auch wenn sie nicht eingerichtet ist. Wählen Sie eine Zenkit-Liste, die diese Sätze stattdessen erhält.",
                 "data": {
-                    "shopping_list": "Einkaufsliste für Assist"
+                    "shopping_list": "Einkaufsliste für Assist",
+                    "list_types": "Außerdem synchronisieren"
                 },
                 "data_description": {
-                    "shopping_list": "Leer lassen, um das Standardverhalten von Home Assistant beizubehalten."
+                    "shopping_list": "Leer lassen, um das Standardverhalten von Home Assistant beizubehalten.",
+                    "list_types": "To-do-Listen werden immer synchronisiert. Projekte und Datenbanken haben andere Felder, ihre Einträge passen daher weniger gut als To-do-Einträge."
                 }
+            }
+        }
+    },
+    "selector": {
+        "list_types": {
+            "options": {
+                "project": "Projekte",
+                "database": "Datenbanken"
             }
         }
     },

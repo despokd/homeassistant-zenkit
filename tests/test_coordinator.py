@@ -8,7 +8,7 @@ from pytest_homeassistant.common import MockConfigEntry
 from homeassistant.helpers.device_registry import DeviceEntryType
 from homeassistant.helpers.update_coordinator import UpdateFailed
 
-from custom_components.zenkit.const import DOMAIN
+from custom_components.zenkit.const import CONF_LIST_TYPES, DOMAIN
 from custom_components.zenkit.coordinator import ZenkitDataUpdateCoordinator
 from custom_components.zenkit.exceptions import UpdateFailedException
 
@@ -270,6 +270,32 @@ def test_no_link_before_account_device_is_registered(coordinator):
     info = coordinator.list_device_info({"uuid": "u", "shortId": "a", "name": "A"})
 
     assert "via_device_id" not in info
+
+
+@pytest.mark.parametrize(
+    ("options", "synced"),
+    [
+        ({}, ["task", "none", "project", "database"]),
+        ({CONF_LIST_TYPES: ["database"]}, ["task", "none", "database"]),
+        ({CONF_LIST_TYPES: []}, ["task", "none"]),
+    ],
+)
+async def test_lists_are_filtered_by_type(hass, options, synced):
+    zk = MagicMock()
+    zk.get_lists = AsyncMock(
+        return_value=[
+            {"shortId": "task", "resourceType": "taskList"},
+            {"shortId": "none"},
+            {"shortId": "project", "resourceType": "project"},
+            {"shortId": "database", "resourceType": "database"},
+        ]
+    )
+    entry = MockConfigEntry(domain=DOMAIN, entry_id="entry", options=options)
+    coordinator = ZenkitDataUpdateCoordinator(hass, zk, USER, entry)
+
+    await coordinator._async_fetch_lists()
+
+    assert [list["shortId"] for list in coordinator.lists] == synced
 
 
 async def test_lists_are_not_refetched_within_interval(coordinator):
