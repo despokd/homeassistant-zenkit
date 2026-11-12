@@ -11,7 +11,14 @@ from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from homeassistant.util import dt as dt_util
 
-from .const import DOMAIN, UPDATE_INTERVAL, USER_UPDATE_INTERVAL, ZENKIT_URL
+from .const import (
+    CONF_LIST_TYPES,
+    DOMAIN,
+    OPTIONAL_LIST_TYPES,
+    UPDATE_INTERVAL,
+    USER_UPDATE_INTERVAL,
+    ZENKIT_URL,
+)
 from .api import Zenkit
 
 _LOGGER = logging.getLogger(__name__)
@@ -131,6 +138,7 @@ class ZenkitDataUpdateCoordinator(DataUpdateCoordinator[dict]):
             # Retried on the next poll
             _LOGGER.warning("Failed to fetch lists: %s", error)
             return
+        lists = [list for list in lists if self._synced(list)]
         removed = {list["shortId"] for list in self._lists or []} - {
             list["shortId"] for list in lists
         }
@@ -140,6 +148,13 @@ class ZenkitDataUpdateCoordinator(DataUpdateCoordinator[dict]):
         self._lists = lists
         self._lists_updated = dt_util.utcnow()
         _LOGGER.debug("Fetched %s lists", len(lists))
+
+    def _synced(self, zenkit_list: dict) -> bool:
+        """Projects and databases only if chosen in the options, other types always."""
+        options = self.config_entry.options if self.config_entry else {}
+        types = options.get(CONF_LIST_TYPES, OPTIONAL_LIST_TYPES)
+        resource_type = zenkit_list.get("resourceType")
+        return resource_type not in OPTIONAL_LIST_TYPES or resource_type in types
 
     @property
     def lists(self) -> list[dict]:

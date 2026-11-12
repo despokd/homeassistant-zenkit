@@ -3,9 +3,13 @@
     "step": {
       "user": {
         "data": {
-          "token": "[%key:common::config_flow::data::api_token%]"
+          "token": "[%key:common::config_flow::data::api_token%]",
+          "list_types": "Also sync"
         },
-        "description": "Please enter your API token from your Account > Integrations > API Tokens section in Zenkit"
+        "description": "Please enter your API token from your Account > Integrations > API Tokens section in Zenkit",
+        "data_description": {
+          "list_types": "Projects and databases are only synced when ticked here. All other lists, such as to-do lists, are always synced. Projects and databases have other fields, so their items may fit less well as to-do items."
+        }
       }
     },
     "error": {
@@ -21,13 +25,23 @@
     "step": {
       "init": {
         "title": "Options",
-        "description": "Assist sends sentences like \"add milk to my shopping list\" to the Shopping List integration, even when it is not set up. Choose a Zenkit list to get these sentences instead.",
+        "description": "Choose which Zenkit lists to sync. Assist sends sentences like \"add milk to my shopping list\" to the Shopping List integration, even when it is not set up. Choose a Zenkit list to get these sentences instead.",
         "data": {
-          "shopping_list": "Shopping list for Assist"
+          "shopping_list": "Shopping list for Assist",
+          "list_types": "Also sync"
         },
         "data_description": {
-          "shopping_list": "Leave empty to keep Home Assistant's default behavior."
+          "shopping_list": "Leave empty to keep Home Assistant's default behavior.",
+          "list_types": "Projects and databases are only synced when ticked here. All other lists, such as to-do lists, are always synced. Projects and databases have other fields, so their items may fit less well as to-do items."
         }
+      }
+    }
+  },
+  "selector": {
+    "list_types": {
+      "options": {
+        "project": "Projects",
+        "database": "Databases"
       }
     }
   },

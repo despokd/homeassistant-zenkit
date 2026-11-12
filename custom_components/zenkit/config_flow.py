@@ -23,15 +23,31 @@ from homeassistant.helpers.selector import (
 )
 
 from .api import Zenkit
-from .const import CONF_SHOPPING_LIST, DOMAIN
+from .const import CONF_LIST_TYPES, CONF_SHOPPING_LIST, DOMAIN, OPTIONAL_LIST_TYPES
 from .coordinator import ZenkitConfigEntry
 from .exceptions import CannotConnectException, CannotLoginException
 
 _LOGGER = logging.getLogger(__name__)
 
+
+def _list_types_field(current: list[str]) -> dict:
+    """Choose whether projects and databases are synced, other types always are."""
+    return {
+        vol.Optional(CONF_LIST_TYPES, default=current): SelectSelector(
+            SelectSelectorConfig(
+                options=OPTIONAL_LIST_TYPES,
+                multiple=True,
+                mode=SelectSelectorMode.LIST,
+                translation_key=CONF_LIST_TYPES,
+            )
+        ),
+    }
+
+
 STEP_USER_DATA_SCHEMA = vol.Schema(
     {
         vol.Required(CONF_TOKEN): str,
+        **_list_types_field(OPTIONAL_LIST_TYPES),
     }
 )
 
@@ -69,7 +85,13 @@ class ZenkitConfigFlow(ConfigFlow, domain=DOMAIN):
                 await self.async_set_unique_id(str(user["id"]))
                 self._abort_if_unique_id_configured()
                 return self.async_create_entry(
-                    title=user.get("username", "Zenkit"), data=user_input
+                    title=user.get("username", "Zenkit"),
+                    data={CONF_TOKEN: user_input[CONF_TOKEN]},
+                    options={
+                        CONF_LIST_TYPES: user_input.get(
+                            CONF_LIST_TYPES, OPTIONAL_LIST_TYPES
+                        )
+                    },
                 )
 
         return self.async_show_form(
@@ -78,7 +100,7 @@ class ZenkitConfigFlow(ConfigFlow, domain=DOMAIN):
 
 
 class ZenkitOptionsFlow(OptionsFlowWithReload):
-    """Choose the list for Assist's shopping list sentences, see assist.py."""
+    """Choose the synced list types and the list for Assist, see assist.py."""
 
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None
@@ -97,6 +119,9 @@ class ZenkitOptionsFlow(OptionsFlowWithReload):
         current = entry.options.get(CONF_SHOPPING_LIST)
         schema = vol.Schema(
             {
+                **_list_types_field(
+                    entry.options.get(CONF_LIST_TYPES, OPTIONAL_LIST_TYPES)
+                ),
                 vol.Optional(
                     CONF_SHOPPING_LIST,
                     description={"suggested_value": current} if current else None,

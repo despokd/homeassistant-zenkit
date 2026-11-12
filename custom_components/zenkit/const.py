@@ -18,3 +18,7 @@ DUE_DATETIME_FORMAT = "%Y-%m-%dT%H:%M:%S.000Z"
 COMPLETED_COLOR = "#3ba744"
 # Option: uuid of the list that gets Assist's shopping list sentences
 CONF_SHOPPING_LIST = "shopping_list"
+# Option: which of these list types (resourceType) are synced, all if unset.
+# Other types, also unknown ones, are always synced
+CONF_LIST_TYPES = "list_types"
+OPTIONAL_LIST_TYPES = ["project", "database"]

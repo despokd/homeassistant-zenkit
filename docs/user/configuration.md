@@ -7,6 +7,11 @@ Go to Configuration -> Integrations and click on "add integration". Then search 
 ### Configuration Variables
 
 - __token__: Your API Key from Your Account > Integrations > API Key
+- __Also sync__: whether __Projects__ and __Databases__ are synced (both by default). All other list types are always synced. Change it later in Settings > Devices & services > Zenkit > ⚙ (Configure)
+
+### List types
+
+Zenkit has to-do lists, projects and databases. Projects and databases are synced only while ticked under __Also sync__; every other list type, to-do lists and types Zenkit may add later, is always synced. Projects and databases have their own fields, so their items may fit less well as to-do items; untick them to leave them out. Saving the options reloads the integration: lists of an unticked type lose their device and entities, ticked ones get them. Installs from before this option sync all types.
 
 ### Assist shopping list
 
@@ -153,7 +158,7 @@ The integration groups its entities into devices:
 
 The integration page shows the account and organization under services and the lists under devices. List and organization devices are linked to the account device ("Connected via"). Models are in the language of Home Assistant at setup. The todo list and calendar are named after their list device, the count sensors are e.g. "Groceries Open entries".
 
-Installs from before the grouping keep their device, with its area and name, as the account device. Entity ids stay the same. Lists are checked every hour and on the refresh button: new lists and projects get their device and entities, devices of lists deleted in Zenkit are removed with their entities, and renamed lists rename their device. A name you gave the device in Home Assistant is kept.
+Installs from before the grouping keep their device, with its area and name, as the account device. Entity ids stay the same. Lists are checked every hour and on the refresh button: new lists of a synced type get their device and entities, devices of lists deleted in Zenkit are removed with their entities, and renamed lists rename their device. A name you gave the device in Home Assistant is kept.
 
 Each Zenkit account can only be added once.
 
