@@ -8,7 +8,7 @@
                 },
                 "description": "Holen Sie sich Ihren API-Token aus dem Abschnitt Konto > Integrationen > API-Tokens",
                 "data_description": {
-                    "list_types": "To-do-Listen werden immer synchronisiert. Projekte und Datenbanken haben andere Felder, ihre Einträge passen daher weniger gut als To-do-Einträge."
+                    "list_types": "Projekte und Datenbanken werden nur synchronisiert, wenn sie hier ausgewählt sind. Alle anderen Listen, etwa To-do-Listen, werden immer synchronisiert. Projekte und Datenbanken haben andere Felder, ihre Einträge passen daher weniger gut als To-do-Einträge."
                 }
             }
         },
@@ -32,7 +32,7 @@
                 },
                 "data_description": {
                     "shopping_list": "Leer lassen, um das Standardverhalten von Home Assistant beizubehalten.",
-                    "list_types": "To-do-Listen werden immer synchronisiert. Projekte und Datenbanken haben andere Felder, ihre Einträge passen daher weniger gut als To-do-Einträge."
+                    "list_types": "Projekte und Datenbanken werden nur synchronisiert, wenn sie hier ausgewählt sind. Alle anderen Listen, etwa To-do-Listen, werden immer synchronisiert. Projekte und Datenbanken haben andere Felder, ihre Einträge passen daher weniger gut als To-do-Einträge."
                 }
             }
         }

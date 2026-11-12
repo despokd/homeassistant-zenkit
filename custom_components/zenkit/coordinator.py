@@ -150,7 +150,7 @@ class ZenkitDataUpdateCoordinator(DataUpdateCoordinator[dict]):
         _LOGGER.debug("Fetched %s lists", len(lists))
 
     def _synced(self, zenkit_list: dict) -> bool:
-        """Whether the list type is chosen in the options, to-do lists always are."""
+        """Projects and databases only if chosen in the options, other types always."""
         options = self.config_entry.options if self.config_entry else {}
         types = options.get(CONF_LIST_TYPES, OPTIONAL_LIST_TYPES)
         resource_type = zenkit_list.get("resourceType")

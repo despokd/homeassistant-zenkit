@@ -31,7 +31,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 def _list_types_field(current: list[str]) -> dict:
-    """Choose the list types synced besides to-do lists."""
+    """Choose whether projects and databases are synced, other types always are."""
     return {
         vol.Optional(CONF_LIST_TYPES, default=current): SelectSelector(
             SelectSelectorConfig(
