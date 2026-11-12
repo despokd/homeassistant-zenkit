@@ -2,6 +2,9 @@
   "services": {
     "create_entry": {
       "service": "mdi:clipboard-plus-outline"
+    },
+    "update_entry": {
+      "service": "mdi:clipboard-edit-outline"
     }
   }
 }

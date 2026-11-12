@@ -221,6 +221,9 @@
         },
         "unknown_user": {
             "message": "„{value}“ ist kein Mitglied der Liste, Mitglieder: {users}"
+        },
+        "item_not_found": {
+            "message": "{list} hat keinen Eintrag „{item}“"
         }
     },
     "services": {
@@ -263,6 +266,44 @@
                 "checklist_name": {
                     "name": "Name der Checkliste",
                     "description": "Name der Checkliste, Checklist wenn leer."
+                }
+            }
+        },
+        "update_entry": {
+            "name": "Eintrag aktualisieren",
+            "description": "Ändert Felder eines Eintrags in einer Zenkit-Liste, auch Felder, die ein To-do-Element nicht hat. Nicht angegebene Felder bleiben unverändert.",
+            "fields": {
+                "item": {
+                    "name": "Eintrag",
+                    "description": "Der Titel oder die UID des Eintrags."
+                },
+                "rename": {
+                    "name": "Umbenennen",
+                    "description": "Der neue Titel des Eintrags."
+                },
+                "description": {
+                    "name": "Beschreibung",
+                    "description": "Text für das Notizfeld der Liste, leer zum Löschen."
+                },
+                "due_date": {
+                    "name": "Fälligkeitsdatum",
+                    "description": "Das Datum, an dem der Eintrag fällig ist, leer zum Löschen."
+                },
+                "due_datetime": {
+                    "name": "Fälligkeitsdatum und -uhrzeit",
+                    "description": "Datum und Uhrzeit, an dem der Eintrag fällig ist, leer zum Löschen."
+                },
+                "status": {
+                    "name": "Status",
+                    "description": "Name einer Statusoption der Liste, wie in Zenkit angezeigt."
+                },
+                "labels": {
+                    "name": "Labels",
+                    "description": "Namen von Tag-Optionen der Liste, wie in Zenkit angezeigt. Ersetzt die Labels des Eintrags, eine leere Liste entfernt sie."
+                },
+                "assignees": {
+                    "name": "Zugewiesene",
+                    "description": "Namen oder Benutzernamen von Mitgliedern der Liste. Ersetzt die Zugewiesenen des Eintrags, eine leere Liste entfernt sie."
                 }
             }
         }

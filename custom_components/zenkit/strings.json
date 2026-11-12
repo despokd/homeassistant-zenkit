@@ -221,6 +221,9 @@
     },
     "unknown_user": {
       "message": "\"{value}\" is no member of the list, members: {users}"
+    },
+    "item_not_found": {
+      "message": "{list} has no entry \"{item}\""
     }
   },
   "services": {
@@ -263,6 +266,44 @@
         "checklist_name": {
           "name": "Checklist name",
           "description": "Name of the checklist, Checklist if empty."
+        }
+      }
+    },
+    "update_entry": {
+      "name": "Update entry",
+      "description": "Changes fields of an entry in a Zenkit list, also fields a to-do item doesn't have. Fields that are not given stay as they are.",
+      "fields": {
+        "item": {
+          "name": "Item",
+          "description": "The title or uid of the entry."
+        },
+        "rename": {
+          "name": "Rename",
+          "description": "The new title of the entry."
+        },
+        "description": {
+          "name": "Description",
+          "description": "Text for the notes field of the list, empty to clear it."
+        },
+        "due_date": {
+          "name": "Due date",
+          "description": "The date the entry is due, empty to clear it."
+        },
+        "due_datetime": {
+          "name": "Due date and time",
+          "description": "The date and time the entry is due, empty to clear it."
+        },
+        "status": {
+          "name": "Status",
+          "description": "Name of a status option of the list, as shown in Zenkit."
+        },
+        "labels": {
+          "name": "Labels",
+          "description": "Names of tag options of the list, as shown in Zenkit. Replaces the labels of the entry, an empty list removes them."
+        },
+        "assignees": {
+          "name": "Assignees",
+          "description": "Names or usernames of members of the list. Replaces the assignees of the entry, an empty list removes them."
         }
       }
     }

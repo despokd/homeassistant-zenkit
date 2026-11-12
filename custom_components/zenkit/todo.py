@@ -21,6 +21,7 @@ from homeassistant.util import dt as dt_util
 from .const import DOMAIN, DUE_DATE_FORMAT, COMPLETED_COLOR
 from .coordinator import ZenkitConfigEntry, ZenkitDataUpdateCoordinator
 from .entity import async_add_list_entities
+from .exceptions import UpdateFailedException
 from .elements import (
     dependencies_element,
     due_element,
@@ -228,6 +229,15 @@ def _item_details(
     return details
 
 
+def _is_uuid(value: str) -> bool:
+    """Whether a value is a uuid, so it can't change the path of a request."""
+    try:
+        uuid.UUID(value)
+    except ValueError:
+        return False
+    return True
+
+
 def _parse_due(
     item: dict[str, Any], uuid: str
 ) -> datetime.date | datetime.datetime | None:
@@ -407,6 +417,54 @@ class ZenkitTodoListEntity(
         await self.coordinator.zk.create_entry(self.list_short_id, uid, **fields)
         await self.coordinator.async_refresh_list(self.list_short_id)
         return {"uid": uid}
+
+    async def async_update_entry(self, item: str, **fields: Any) -> None:
+        """Change fields a To-do item doesn't have (zenkit.update_entry).
+
+        Only given fields are written, `None` or `[]` clears a field.
+        """
+        uid = await self._async_find_entry(item)
+        changes: dict[str, Any] = {}
+        if "rename" in fields:
+            changes["name"] = fields["rename"]
+        if "description" in fields:
+            changes["description"] = fields["description"]
+        if "due_datetime" in fields:
+            due = fields["due_datetime"]
+            # Without a time zone, the time is in the time zone of HA
+            changes["due"] = dt_util.as_local(due) if due is not None else None
+        elif "due_date" in fields:
+            changes["due"] = fields["due_date"]
+        for field in ("status", "labels", "assignees"):
+            if field in fields:
+                changes[field] = fields[field]
+        if not changes:
+            return
+
+        await self.coordinator.zk.update_entry(self.list_short_id, uid, **changes)
+        await self.coordinator.async_refresh_list(self.list_short_id)
+
+    async def _async_find_entry(self, item: str) -> str:
+        """Get the uid of an entry by its uid or title, as todo.update_item does.
+
+        The coordinator only has open entries, so a uid that is not among them
+        is looked up in Zenkit, which finds completed entries too.
+        """
+        for entry in self.coordinator.data.get(self.list_short_id, []):
+            if item in (entry["uuid"], entry["displayString"]):
+                return entry["uuid"]
+        if _is_uuid(item):
+            try:
+                return (await self.coordinator.zk.get_list_entry(self.list_id, item))[
+                    "uuid"
+                ]
+            except UpdateFailedException:
+                pass
+        raise ServiceValidationError(
+            translation_domain=DOMAIN,
+            translation_key="item_not_found",
+            translation_placeholders={"item": item, "list": self.list_name},
+        )
 
     async def async_update_todo_item(self, item: TodoItem) -> None:
         """Update a To-do item."""

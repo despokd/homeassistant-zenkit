@@ -17,7 +17,7 @@ Bring your [Zenkit](https://zenkit.com) lists into Home Assistant as to-do lists
 ## Features
 
 - One **to-do entity per Zenkit list**: add, edit, complete and delete items
-- A **`zenkit.create_entry` action** to add items with status, labels, assignees and a checklist
+- **`zenkit.create_entry` and `zenkit.update_entry` actions** to add and change items with status, labels, assignees and a checklist
 - Item details: description, due date, sub-items, dependencies and checklists
 - A read-only **calendar per list** with the due dates of open items
 - **Count sensors per list**: open, overdue and due today
@@ -107,10 +107,23 @@ actions:
       checklist: [Passport, Charger]
 ```
 
+Change these fields later, by title or uid:
+
+```yaml
+actions:
+  - action: zenkit.update_entry
+    target:
+      entity_id: todo.groceries
+    data:
+      item: Buy milk
+      status: Done
+      labels: []
+```
+
 ## Good to know
 
 - Data is polled every 60 seconds, the lists themselves every hour. Press the refresh button for an immediate update.
-- Name, completed state, description and due date of items can be changed from Home Assistant. Status, labels, assignees and checklists can only be set when creating an item with `zenkit.create_entry`.
+- Name, completed state, description and due date of items can be changed from the to-do entity. Status, labels and assignees can be changed with `zenkit.update_entry`. Checklists can only be set when creating an item with `zenkit.create_entry`.
 - Completed items aren't shown in Home Assistant or loaded from Zenkit. Reopen them in Zenkit.
 - Lists without a status field show their items in a separate section with an indeterminate checkbox, and can't be completed.
 
