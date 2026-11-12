@@ -8,6 +8,7 @@ import pytest
 from homeassistant.components.todo import TodoItem, TodoItemStatus
 from homeassistant.exceptions import ServiceValidationError
 
+from custom_components.zenkit.exceptions import UpdateFailedException
 from custom_components.zenkit.todo import (
     ITEM_DETAILS,
     ZenkitTodoListEntity,
@@ -499,3 +500,110 @@ async def test_create_entry_empty_checklist_is_not_sent(entity):
 
     _, _, kwargs = entity.coordinator.zk.create_entry.mock_calls[0]
     assert kwargs == {"name": "Trip"}
+
+
+@pytest.mark.parametrize("item", ["entry-uuid", "Buy milk"])
+async def test_update_entry_by_uid_or_summary(entity, item):
+    await entity.async_update_entry(
+        item=item,
+        rename="Buy oat milk",
+        description="2 liters",
+        due_date=datetime.date(2026, 11, 3),
+        status="In progress",
+        labels=["Important"],
+        assignees=["Jane Doe"],
+    )
+
+    entity.coordinator.zk.update_entry.assert_awaited_once_with(
+        "list",
+        "entry-uuid",
+        name="Buy oat milk",
+        description="2 liters",
+        due=datetime.date(2026, 11, 3),
+        status="In progress",
+        labels=["Important"],
+        assignees=["Jane Doe"],
+    )
+    entity.coordinator.async_refresh_list.assert_awaited_once_with("list")
+
+
+async def test_update_entry_sends_only_given_fields(entity):
+    await entity.async_update_entry(item="Buy milk", labels=["Important"])
+
+    entity.coordinator.zk.update_entry.assert_awaited_once_with(
+        "list", "entry-uuid", labels=["Important"]
+    )
+
+
+async def test_update_entry_clears_fields(entity):
+    await entity.async_update_entry(
+        item="Buy milk", description=None, due_date=None, labels=[], assignees=[]
+    )
+
+    entity.coordinator.zk.update_entry.assert_awaited_once_with(
+        "list",
+        "entry-uuid",
+        description=None,
+        due=None,
+        labels=[],
+        assignees=[],
+    )
+
+
+async def test_update_entry_due_time_without_zone_is_local(hass, entity):
+    await hass.config.async_set_time_zone("Europe/Berlin")
+
+    await entity.async_update_entry(
+        item="Buy milk", due_datetime=datetime.datetime(2026, 11, 3, 18, 0)
+    )
+
+    _, _, kwargs = entity.coordinator.zk.update_entry.mock_calls[0]
+    assert kwargs["due"] == datetime.datetime(
+        2026, 11, 3, 17, 0, tzinfo=datetime.timezone.utc
+    )
+
+
+async def test_update_entry_looks_up_uid_not_in_data(entity):
+    # Completed entries are not in the coordinator data
+    uid = "0b5a3a5e-4d43-4ac1-9b38-1f1d5e2bb0d1"
+    entity.coordinator.zk.get_list_entry = AsyncMock(return_value={"uuid": uid})
+
+    await entity.async_update_entry(item=uid, status="Open")
+
+    entity.coordinator.zk.get_list_entry.assert_awaited_once_with("1", uid)
+    entity.coordinator.zk.update_entry.assert_awaited_once_with(
+        "list", uid, status="Open"
+    )
+
+
+async def test_update_entry_unknown_uid_fails(entity):
+    entity.coordinator.zk.get_list_entry = AsyncMock(
+        side_effect=UpdateFailedException("Failed to fetch entry")
+    )
+
+    with pytest.raises(ServiceValidationError) as error:
+        await entity.async_update_entry(
+            item="0b5a3a5e-4d43-4ac1-9b38-1f1d5e2bb0d1", rename="Bread"
+        )
+
+    assert error.value.translation_key == "item_not_found"
+    entity.coordinator.zk.update_entry.assert_not_awaited()
+
+
+async def test_update_entry_without_fields_is_not_written(entity):
+    await entity.async_update_entry(item="Buy milk")
+
+    entity.coordinator.zk.update_entry.assert_not_awaited()
+    entity.coordinator.async_refresh_list.assert_not_awaited()
+
+
+async def test_update_entry_unknown_item_fails(entity):
+    entity.coordinator.zk.get_list_entry = AsyncMock()
+
+    with pytest.raises(ServiceValidationError) as error:
+        await entity.async_update_entry(item="Buy bread", rename="Bread")
+
+    assert error.value.translation_key == "item_not_found"
+    # A title is never put in a request path
+    entity.coordinator.zk.get_list_entry.assert_not_awaited()
+    entity.coordinator.zk.update_entry.assert_not_awaited()

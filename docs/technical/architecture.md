@@ -9,7 +9,7 @@ custom_components/zenkit/
 ├── assist.py         # Registers Assist's shopping list sentences as conversation sentence triggers for the list chosen in the options, see assist.md
 ├── api.py            # Zenkit REST client on HA's shared aiohttp session (`async_get_clientsession`), 30 s timeout per request, caches list elements
 ├── elements.py       # Finds the title/notes/due/status/labels/assignees elements of a list by role, with fallbacks; options by name
-├── services.py       # zenkit.create_entry: entity action on the Zenkit todo entities (ZenkitTodoListEntity.async_create_entry), schema in services.yaml
+├── services.py       # zenkit.create_entry / zenkit.update_entry: entity actions on the Zenkit todo entities (ZenkitTodoListEntity.async_create_entry / async_update_entry), fields in services.yaml
 ├── coordinator.py    # DataUpdateCoordinator: polls every UPDATE_INTERVAL s, data = {list shortId: [entries]}, failed_lists; unread_notifications; user; device info of the account, organization and each list (identifiers scoped to the entry id, linked to the account device by `via_device_id`, so HA 2026.8+ is required; account and organization are services, lists are devices with their `resourceType` as model, translated via the `device` strings since HA translates only device names); lists refetched every USER_UPDATE_INTERVAL s; refresh of a single list; forced refresh
 ├── entity.py         # async_add_list_entities: adds the entities of each list, and of lists added later
 ├── todo.py           # One TodoListEntity per Zenkit list; maps entries <-> TodoItem

@@ -84,6 +84,35 @@ actions:
     response_variable: created
 ```
 
+### Update entry action
+
+`zenkit.update_entry` changes an item of the targeted Zenkit to-do lists, also the fields `todo.update_item` doesn't have. Only the given fields are written, the others stay as they are.
+
+| Field | Value |
+| --- | --- |
+| `item` | Title or uid of the item (required) |
+| `rename` | New title |
+| `description` | Text for the notes field, empty or `null` to clear it |
+| `due_date` / `due_datetime` | Due date, or date and time, `null` to clear it. A time without time zone is in the time zone of Home Assistant |
+| `status` | Name of a status option |
+| `labels` | Names of tag options. Replaces the labels of the item, `[]` removes them all |
+| `assignees` | Display names or usernames of list members. Replaces the assignees of the item, `[]` removes them all |
+
+Names are matched as in `zenkit.create_entry`. A title matches open items only, the first one if several have it. Completed items can be changed by their uid, e.g. the one `zenkit.create_entry` returns. Checklists can't be changed.
+
+```yaml
+actions:
+  - action: zenkit.update_entry
+    target:
+      entity_id: todo.groceries
+    data:
+      item: Buy milk
+      rename: Buy oat milk
+      status: In progress
+      labels: [Important, Weekly]
+      assignees: []
+```
+
 ### Calendars
 
 Each list with a due date field also gets a read-only calendar entity, e.g. `calendar.groceries` (calendars added before the list devices keep their id, e.g. `calendar.jane_doe_groceries`). Its events are the open items with a due date:

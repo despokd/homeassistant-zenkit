@@ -45,3 +45,45 @@ create_entry:
       example: "Packing list"
       selector:
         text:
+update_entry:
+  target:
+    entity:
+      integration: zenkit
+      domain: todo
+  fields:
+    item:
+      required: true
+      example: "Buy milk"
+      selector:
+        text:
+    rename:
+      example: "Buy oat milk"
+      selector:
+        text:
+    description:
+      example: "2 liters"
+      selector:
+        text:
+          multiline: true
+    due_date:
+      example: "2026-11-30"
+      selector:
+        date:
+    due_datetime:
+      example: "2026-11-30 18:00:00"
+      selector:
+        datetime:
+    status:
+      example: "In progress"
+      selector:
+        text:
+    labels:
+      example: "Important"
+      selector:
+        text:
+          multiple: true
+    assignees:
+      example: "Jane Doe"
+      selector:
+        text:
+          multiple: true
